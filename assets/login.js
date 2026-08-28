@@ -55,7 +55,9 @@
 
     var gClientId = window.OS_GOOGLE_CLIENT_ID;
     var gBtn = document.getElementById("google-btn");
-    if(gBtn && gClientId && window.google && google.accounts && google.accounts.id){
+    var gInitialized = false;
+    function ensureGoogleInit(){
+      if(gInitialized || !window.google || !google.accounts || !google.accounts.id) return gInitialized;
       google.accounts.id.initialize({
         client_id: gClientId,
         callback: function(resp){
@@ -64,7 +66,14 @@
             .catch(function(){ showErr("Network error — is the API reachable?"); });
         }
       });
-      gBtn.addEventListener("click", function(){ google.accounts.id.prompt(); });
+      gInitialized = true;
+      return true;
+    }
+    if(gBtn && gClientId){
+      gBtn.addEventListener("click", function(){
+        if(ensureGoogleInit()) google.accounts.id.prompt();
+        else showErr("Still loading Google sign-in — try again in a second.");
+      });
     } else if(gBtn){
       gBtn.addEventListener("click", function(){ showErr("Google sign-in isn't configured yet."); });
     }
