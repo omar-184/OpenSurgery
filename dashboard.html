@@ -1,15 +1,30 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OpenSurgery</title><meta name="description" content="A structured, fully cited general surgery reference built from seven canonical textbooks.">
+<title>Dashboard | OpenSurgery</title><meta name="description" content="Your OpenSurgery reading and quiz progress.">
 <script>(function(){try{if(localStorage.getItem("os-theme")==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}})();</script>
 <link rel="stylesheet" href="assets/style.css?v=1f5271c9"></head>
 <body data-root="">
 <header class="toolbar"><a class="wordmark" href="index.html">Open<span>Surgery</span></a><nav><a href="library.html">Library</a><a href="question-bank/index.html">Q Bank</a><button type="button" id="search-trigger" class="icon-btn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button><button type="button" id="theme-toggle" class="icon-btn" aria-label="Toggle light mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button><div class="auth-area" id="auth-area"></div></nav></header>
-<section class="hero centered"><div class="wave"></div><div class="wrap"><div class="logo-mark">Open<span>Surgery</span></div><p class="sub">A structured, fully cited surgical reference built from seven canonical textbooks.</p><div class="meta">81 topics · 7 textbooks · 305 textbook questions</div><div class="hero-search"><input id="hero-search-input" type="text" placeholder="Search topics…" autocomplete="off"><div id="hero-search-results" class="hero-search-results"></div></div><div class="cta"><a class="btn fill" href="library.html">Browse the Library</a><a class="btn tint" href="question-bank/index.html">Question Bank</a></div></div></section><div class="wrap"><h2 class="section-title" id="sources">Sources</h2><p class="section-sub">Seven canonical textbooks underpin every cited fact in this reference.</p><div class="grid"><div class="card"><span class="glyph">BA</span><h3>Bailey &amp; Love's Short Practice of Surgery, 28th ed.</h3></div><div class="card"><span class="glyph">SA</span><h3>Sabiston Textbook of Surgery, 22nd ed.</h3></div><div class="card"><span class="glyph">MA</span><h3>Maingot's Abdominal Operations, 13th ed.</h3></div><div class="card"><span class="glyph">BR</span><h3>Browse's Introduction to the Symptoms and Signs of Surgical Disease, 6th ed.</h3></div><div class="card"><span class="glyph">OX</span><h3>Oxford Handbook of Clinical Surgery, 5th ed.</h3></div><div class="card"><span class="glyph">SC</span><h3>Schwartz's Principles of Surgery: ABSITE and Board Review</h3></div><div class="card"><span class="glyph">AB</span><h3>The ABSITE Review, 2022</h3></div></div></div>
+<div class="wrap">
+<div style="padding:2.6rem 0 .5rem">
+  <h1 style="font-size:2.1rem;letter-spacing:-.02em;font-weight:700">Your progress</h1>
+  <p id="dash-who" style="margin-top:.5rem;color:var(--text2)"></p>
+</div>
+<div class="stat-row">
+  <div class="stat"><div class="label">Topics read</div><div class="num" id="stat-topics">—</div><div class="sub" id="stat-topics-sub"></div></div>
+  <div class="stat"><div class="label">Categories started</div><div class="num" id="stat-cats">—</div><div class="sub"></div></div>
+  <div class="stat"><div class="label">Quizzes attempted</div><div class="num" id="stat-quizzes">—</div><div class="sub" id="stat-quizzes-sub"></div></div>
+  <div class="stat"><div class="label">Average score</div><div class="num" id="stat-avg">—</div><div class="sub">scored questions only</div></div>
+</div>
+<h2 class="section-title" style="margin-top:2.6rem;font-size:1.25rem">By category</h2>
+<div class="cat-list" id="cat-list"></div>
+<h2 class="section-title" style="margin-top:2.6rem;font-size:1.25rem">Recent activity</h2>
+<div class="activity" id="activity"></div>
+</div>
 <footer><div class="wrap">OpenSurgery. A cited general surgery reference drawn from seven textbooks.</div></footer>
 <script>window.OS_API_BASE="";window.OS_GOOGLE_CLIENT_ID="";</script>
 <script src="assets/auth.js?v=1f5271c9"></script>
 <script src="assets/progress.js?v=1f5271c9"></script>
 <script src="assets/app.js?v=1f5271c9"></script>
-</body></html>
+<script>window.OS_CATEGORY_NAMES={"upper-gi": "Upper Gastrointestinal", "hpb": "Hepatobiliary & Pancreatic", "colorectal": "Colorectal", "breast": "Breast", "endocrine": "Endocrine", "hernia": "Hernia & Abdominal Wall", "trauma-critical-care": "Trauma & Critical Care", "surgical-oncology": "Surgical Oncology", "vascular": "Vascular", "mis-endoscopic": "Minimally Invasive & Endoscopic", "skin-soft-tissue": "Skin & Soft Tissue", "pediatric": "Pediatric Surgery", "perioperative": "Perioperative & Foundational"};</script><script src="assets/dashboard.js?v=1f5271c9"></script></body></html>

@@ -8,6 +8,7 @@
   if(!QS.length){ mount.innerHTML = "<p>No questions available for this selection.</p>"; return; }
   var state = QS.map(function(){ return {picked:null, locked:false, flagged:false, left:60}; });
   var cur = 0, finished = false, timerId = null;
+  var startedAt = new Date().toISOString();
 
   function el(tag, cls, htmlStr){ var d=document.createElement(tag); if(cls)d.className=cls; if(htmlStr!=null)d.innerHTML=htmlStr; return d; }
   function answered(){ return state.filter(function(s){ return s.picked!==null || s.locked; }).length; }
@@ -105,6 +106,15 @@
   function finish(){
     finished = true;
     if(timerId) clearInterval(timerId);
+    if(window.OS && OS.recordAttempt){
+      OS.recordAttempt({
+        category_slug: window.QUIZ_CATEGORY, mode: MODE, topic_filter: topicFilter || null,
+        started_at: startedAt, completed_at: new Date().toISOString(),
+        answers: QS.map(function(q,i){
+          return {question_id:q.id, topic:q.topic, picked:state[i].picked, correct:q.answer||null, flagged:state[i].flagged};
+        })
+      });
+    }
     renderResults();
     window.scrollTo({top:0});
   }

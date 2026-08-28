@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Log in | OpenSurgery</title><meta name="description" content="Sign in to OpenSurgery to save your reading and quiz progress.">
+<script>(function(){try{if(localStorage.getItem("os-theme")==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/style.css?v=1f5271c9"><script src="https://accounts.google.com/gsi/client" async defer></script></head>
+<body data-root="">
+<header class="toolbar"><a class="wordmark" href="index.html">Open<span>Surgery</span></a><nav><a href="library.html">Library</a><a href="question-bank/index.html">Q Bank</a><button type="button" id="search-trigger" class="icon-btn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button><button type="button" id="theme-toggle" class="icon-btn" aria-label="Toggle light mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button><div class="auth-area" id="auth-area"></div></nav></header>
+<section class="hero"><div class="wrap">
+<h1>Track your progress</h1>
+<p class="sub">Save which topics you've read and how you scored on quizzes.</p>
+<div class="auth-card">
+  <button type="button" class="auth-btn google" id="google-btn"><svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z"/></svg> Continue with Google</button>
+  <button type="button" class="btn fill" id="show-signup" style="width:100%;margin-top:.9rem">Create account</button>
+  <button type="button" class="auth-btn skip" id="skip-btn">Skip for now — browse without saving progress</button>
+  <p class="auth-fine">Creating an account stores your email, display name, and which topics/quizzes
+    you've engaged with. No clinical or health data about you is collected, and nothing is shared
+    with third parties.</p>
+  <div class="auth-divider" id="signup-panel" data-mode="register" style="display:none">
+    <div class="auth-state-label" id="signup-title">Create account — expanded</div>
+    <form id="signup-form">
+      <div class="auth-field" id="name-field"><label>Display name</label><input id="name-input" required></div>
+      <div class="auth-field"><label>Email</label><input id="email-input" type="email" required></div>
+      <div class="auth-field"><label>Password</label><input id="password-input" type="password" required minlength="8"></div>
+      <div class="auth-field" id="confirm-field"><label>Confirm password</label><input id="confirm-input" type="password"></div>
+      <div class="auth-error" id="auth-error"></div>
+      <button type="submit" class="btn fill" id="signup-submit" style="width:100%;margin-top:.4rem">Create account</button>
+    </form>
+    <div class="auth-toggle-line"><a href="#" id="show-login">Already have an account? Log in</a></div>
+  </div>
+</div>
+</div></section>
+<footer><div class="wrap">OpenSurgery. A cited general surgery reference drawn from seven textbooks.</div></footer>
+<script>window.OS_API_BASE="";window.OS_GOOGLE_CLIENT_ID="";</script>
+<script src="assets/auth.js?v=1f5271c9"></script>
+<script src="assets/progress.js?v=1f5271c9"></script>
+<script src="assets/app.js?v=1f5271c9"></script>
+<script src="assets/login.js?v=1f5271c9"></script></body></html>
