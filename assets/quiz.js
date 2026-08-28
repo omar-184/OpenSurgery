@@ -6,8 +6,9 @@
   var QS = topicFilter ? ALL.filter(function(q){ return q.topic === topicFilter; }) : ALL;
   var mount = document.getElementById("quiz");
   if(!QS.length){ mount.innerHTML = "<p>No questions available for this selection.</p>"; return; }
-  var state = QS.map(function(){ return {picked:null, locked:false, flagged:false, left:60}; });
+  var state = QS.map(function(){ return {picked:null, locked:false, flagged:false}; });
   var cur = 0, finished = false, timerId = null;
+  var examLeft = QS.length * 60;
   var startedAt = new Date().toISOString();
 
   function el(tag, cls, htmlStr){ var d=document.createElement(tag); if(cls)d.className=cls; if(htmlStr!=null)d.innerHTML=htmlStr; return d; }
@@ -21,7 +22,7 @@
     var head = el("div","quiz-head");
     head.appendChild(el("div","progress","Question "+(cur+1)+" of "+QS.length+" · "+answered()+" answered"));
     if(MODE==="exam"){
-      var t = el("div","timer"+(st.left<=10?" low":""), fmt(st.left));
+      var t = el("div","timer"+(examLeft<=10?" low":""), fmt(examLeft));
       t.id = "timer"; head.appendChild(t);
     }
     mount.appendChild(head);
@@ -88,19 +89,10 @@
 
   function tick(){
     if(finished || MODE!=="exam") return;
-    var st = state[cur];
-    if(!st.locked && st.picked===null){
-      st.left--;
-      var t = document.getElementById("timer");
-      if(t){ t.textContent = fmt(Math.max(st.left,0)); t.classList.toggle("low", st.left<=10); }
-      if(st.left<=0){
-        st.locked = true;
-        var next = -1;
-        for(var i=1;i<=QS.length;i++){ var j=(cur+i)%QS.length; if(!state[j].locked && state[j].picked===null){ next=j; break; } }
-        if(next<0) return finish();
-        go(next);
-      }
-    }
+    examLeft--;
+    var t = document.getElementById("timer");
+    if(t){ t.textContent = fmt(Math.max(examLeft,0)); t.classList.toggle("low", examLeft<=10); }
+    if(examLeft<=0) finish();
   }
 
   function finish(){

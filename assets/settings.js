@@ -42,5 +42,18 @@
         return r.json().then(function(d){ pwErr.textContent = d.detail || "Could not change password."; pwErr.classList.add("show"); });
       });
     });
+
+    var resetBtn = document.getElementById("reset-progress-btn");
+    if(resetBtn) resetBtn.addEventListener("click", function(){
+      if(!confirm("Reset all progress? This permanently deletes your reading history and quiz attempts and can't be undone.")) return;
+      OS.req("/api/progress/reset", {method:"DELETE"}).then(function(r){
+        if(r.ok){
+          try{ localStorage.removeItem("os-pending-progress"); }catch(e){}
+          OS.showToast("Progress reset.");
+          return;
+        }
+        OS.showToast("Could not reset progress.");
+      });
+    });
   });
 })();
