@@ -41,7 +41,7 @@
     card.appendChild(el("div","stem",q.stem));
     if(q.options.length){
       q.options.forEach(function(opt,i){
-        var letter = "ABCDE"[i];
+        var letter = "ABCDEF"[i];
         var b = el("button","opt","<strong>"+letter+".</strong> "+opt);
         var showFb = MODE==="practice" && st.locked;
         if(st.picked===letter) b.classList.add("sel");
@@ -128,7 +128,7 @@
       } else pill='<span class="pill skip">Self-check</span>';
       var d = el("div",cls, pill + '<div class="stem"><strong>Q'+(i+1)+'.</strong> '+q.stem+"</div>");
       q.options.forEach(function(opt,oi){
-        var letter = "ABCDE"[oi];
+        var letter = "ABCDEF"[oi];
         var b = el("div","opt","<strong>"+letter+".</strong> "+opt);
         if(q.answer===letter) b.classList.add("good");
         else if(st.picked===letter) b.classList.add("bad");
