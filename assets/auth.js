@@ -70,7 +70,7 @@
           '<div class="who"><div class="name"></div><div class="role"></div></div>'+
           '<div class="items">'+
             '<a href="'+root+'dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</a>'+
-            '<button type="button" class="menu-item" id="profile-settings-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profile Settings</button>'+
+            '<a href="'+root+'settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profile Settings</a>'+
           '</div>'+
           '<div class="logout-item"><button type="button" class="menu-item" id="logout-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Log out</button></div>'+
         '</div>'+
@@ -82,9 +82,6 @@
     var menu = document.getElementById("profile-menu"), btn = document.getElementById("avatar-btn");
     btn.addEventListener("click", function(e){ e.stopPropagation(); menu.classList.toggle("open"); });
     document.addEventListener("click", function(e){ if(!menu.contains(e.target) && e.target!==btn) menu.classList.remove("open"); });
-    document.getElementById("profile-settings-item").addEventListener("click", function(){
-      showToast("Profile settings aren't built yet.");
-    });
     document.getElementById("logout-btn").addEventListener("click", function(){
       req("/api/auth/logout", {method:"POST"}).then(function(){ location.reload(); });
     });
