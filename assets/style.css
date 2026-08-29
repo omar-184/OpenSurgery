@@ -71,8 +71,11 @@ article h1{font-size:clamp(2rem,4.5vw,3rem);letter-spacing:-.02em;line-height:1.
 article h2{font-size:1.45rem;letter-spacing:-.012em;font-weight:650;margin:2.8rem 0 .9rem;padding-top:.5rem}
 article h3{font-size:1.15rem;font-weight:600;margin:2.2rem 0 .7rem}
 article p{margin:.9rem 0;color:#d6d6db;font-size:1.0625rem}
-article ul{margin:.9rem 0 .9rem 1.2rem;color:#d6d6db;font-size:1.0625rem}
-article li{margin:.55rem 0}
+article ul{list-style:none;margin:.9rem 0;padding-left:0;color:#d6d6db;font-size:1.0625rem}
+article ul > li{position:relative;margin:.5rem 0;padding-left:1.05rem}
+article ul > li::before{content:"";position:absolute;left:0;top:.66em;width:5px;height:5px;
+  border-radius:50%;background:var(--accent)}
+article ul.facts li::before{border-radius:1px;transform:rotate(45deg)}
 article em{color:var(--text)}
 article u{text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px;color:var(--text)}
 article mark{background:var(--amber);color:var(--text);border-radius:4px;padding:0 .15em}
@@ -82,11 +85,69 @@ a.ref{color:var(--accent);font-size:.8em;vertical-align:super;line-height:0;text
 .cite{color:var(--text3);font-size:.82em;letter-spacing:.01em}
 figure{margin:1.6rem 0;border-radius:var(--radius);overflow:hidden;background:var(--glass);border:1px solid var(--glass-border)}
 figure img{display:block;max-width:100%;margin:0 auto}
+figure:not(.diagram) img{cursor:zoom-in}
 figcaption{padding:.7rem 1rem;font-size:.85rem;color:var(--text2)}
+/* inline SVG diagrams: inherit the page palette, scale to the column */
+figure.diagram{background:transparent}
+figure.diagram > svg{display:block;width:100%;height:auto;background:transparent}
+figure.diagram .d-fill{fill:var(--glass)}
+figure.diagram .d-stroke{stroke:var(--accent-strong);fill:none}
+figure.diagram .d-line{stroke:var(--accent);fill:none}
+figure.diagram .d-txt{fill:var(--text)}
+figure.diagram .d-sub{fill:var(--text2)}
+figure.diagram .d-dim{fill:var(--text3)}
+figure.diagram .d-accent{fill:var(--accent)}
+figure.diagram .d-chip{fill:var(--accent-dim)}
+figure.diagram .d-warn{fill:#ff9f0a}
+figure.diagram .d-warn-bg{fill:rgba(255,159,10,.12);stroke:rgba(255,159,10,.55)}
+figure.diagram .d-good{fill:var(--good)}
+figure.diagram .d-good-bg{fill:var(--good-dim);stroke:rgba(48,209,88,.5)}
+figure.diagram .d-lane{fill:rgba(127,127,127,.07);stroke:var(--glass-border)}
+/* ---------- tables ---------- */
+.table-wrap{overflow-x:auto;margin:1.5rem 0;border-radius:14px;border:1px solid var(--glass-border)}
+article table{width:100%;border-collapse:collapse;font-size:.95rem;min-width:420px}
+article thead th{background:var(--glass);color:var(--text);text-align:left;font-weight:650;
+  padding:.7rem .9rem;border-bottom:1px solid var(--glass-border);white-space:nowrap}
+article td{padding:.65rem .9rem;border-bottom:1px solid rgba(255,255,255,.06);color:#d6d6db;vertical-align:top}
+article tr:last-child td{border-bottom:0}
+:root[data-theme="light"] article td{color:#3a3a3c}
+/* ---------- title row + UK guidelines toggle ---------- */
+.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;flex-wrap:wrap}
+.title-row h1{margin-bottom:0;flex:1 1 auto}
+.uk-toggle{display:inline-flex;align-items:center;gap:.65rem;flex-shrink:0;margin-top:.5rem;
+  padding:.5rem .9rem;border-radius:999px;background:var(--accent-dim);
+  border:1px solid rgba(58,163,158,.3);font-size:.82rem;color:var(--text2);cursor:pointer;
+  white-space:nowrap;user-select:none}
+.uk-toggle:hover{color:var(--text)}
+@media(max-width:600px){.title-row{gap:.9rem}.uk-toggle{margin-top:0}}
+.switch{position:relative;display:inline-block;width:2.3rem;height:1.32rem;flex-shrink:0}
+.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.switch .slider{position:absolute;inset:0;background:rgba(255,255,255,.18);border-radius:999px;
+  transition:background .18s;pointer-events:none}
+.switch .slider::before{content:"";position:absolute;width:1rem;height:1rem;left:.16rem;top:.16rem;
+  background:#fff;border-radius:50%;transition:transform .18s}
+.switch input:checked + .slider{background:var(--accent)}
+.switch input:checked + .slider::before{transform:translateX(.98rem)}
+.switch input:focus-visible + .slider{outline:2px solid var(--accent);outline-offset:2px}
+:root[data-theme="light"] .switch .slider{background:rgba(0,0,0,.15)}
+/* UK guideline notes, woven inline through the article body */
+.uk-note{margin:1.4rem 0;padding:1.1rem 1.3rem .9rem;border-radius:14px;
+  background:rgba(58,163,158,.07);border:1px solid rgba(58,163,158,.28);
+  border-left:3px solid var(--accent)}
+.uk-note > :first-child{margin-top:0}
+.uk-note > :last-child{margin-bottom:0}
+.uk-note .uk-label{display:inline-block;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;
+  font-weight:700;color:var(--accent);background:var(--accent-dim);padding:.25rem .65rem;
+  border-radius:999px;margin-bottom:.7rem}
+.uk-note p,.uk-note ul{font-size:1.0125rem}
+.uk-note .table-wrap{margin:1rem 0}
+:root.hide-uk .uk-note{display:none}
 .refs{margin-top:3.5rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.08)}
 .refs h2{font-size:1.2rem;margin:0 0 .8rem}
 .refs ol{margin-left:1.4rem;color:var(--text2);font-size:.92rem}
 .refs li{margin:.3rem 0}
+.refs .ref-link{font-size:.86em;color:var(--accent);white-space:nowrap}
+.refs .ref-link::before{content:"↗ ";font-size:.9em}
 .topic-actions{margin:3rem 0 1rem;display:flex;gap:.8rem;flex-wrap:wrap}
 .rail{position:sticky;top:5rem;align-self:start;font-size:.85rem;display:none}
 @media(min-width:980px){.rail{display:block}}
@@ -283,3 +344,31 @@ figcaption{padding:.7rem 1rem;font-size:.85rem;color:var(--text2)}
 .act-row .what{flex:1}
 .act-row .when{color:var(--text3);font-size:.82rem}
 .empty-note{color:var(--text3);font-size:.92rem;padding:1.2rem 0}
+/* ---------- image zoom lightbox ---------- */
+/* #img-lightbox is the only clipping boundary (full viewport, no padding), so a
+   zoomed image is cropped only by the actual screen edge, never by an inner box */
+#img-lightbox{position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;
+  overflow:hidden;background:rgba(0,0,0,.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  cursor:zoom-out;touch-action:none}
+#img-lightbox.open{display:flex}
+#img-lightbox .lb-frame{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  transform:scale(.96);opacity:0;transition:transform .18s cubic-bezier(.32,.72,0,1),opacity .18s}
+#img-lightbox.open .lb-frame{transform:scale(1);opacity:1}
+#img-lightbox .lb-frame img{display:block;max-width:92vw;max-height:88vh;margin:auto;border-radius:10px;
+  box-shadow:0 24px 70px rgba(0,0,0,.55);cursor:zoom-in;touch-action:none;user-select:none;
+  transform-origin:center center}
+#img-lightbox .lb-close{position:absolute;top:1.1rem;right:1.3rem;width:2.4rem;height:2.4rem;border-radius:999px;
+  background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:1.3rem;line-height:1;z-index:2}
+#img-lightbox .lb-close:hover{background:rgba(255,255,255,.2)}
+/* caption: collapsed to one line by default; tap/click expands it over a blurred
+   backdrop so it never overlaps unreadably with the zoomed image beneath it */
+#img-lightbox .lb-cap{position:absolute;left:0;right:0;bottom:0;z-index:1;color:var(--text2);
+  font-size:.85rem;line-height:1.5;padding:.9rem 3.2rem .9rem 1.2rem;cursor:pointer;
+  background:linear-gradient(to top,rgba(0,0,0,.8),transparent);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .18s}
+#img-lightbox .lb-cap.expanded{white-space:normal;text-overflow:clip;max-height:40vh;overflow-y:auto;
+  padding-top:1.1rem;background:rgba(20,21,23,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-top:1px solid rgba(255,255,255,.1)}
+#img-lightbox .lb-cap[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){#img-lightbox .lb-frame{transition:none}}

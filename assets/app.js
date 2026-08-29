@@ -77,6 +77,16 @@
     try{ localStorage.setItem("os-theme", isLight ? "dark" : "light"); }catch(e){}
   });
 
+  // ---- UK guidelines toggle ----
+  var ukToggle = document.getElementById("uk-toggle");
+  if(ukToggle){
+    ukToggle.checked = !document.documentElement.classList.contains("hide-uk");
+    ukToggle.addEventListener("change", function(){
+      document.documentElement.classList.toggle("hide-uk", !ukToggle.checked);
+      try{ localStorage.setItem("os-uk-guidelines", ukToggle.checked ? "1" : "0"); }catch(e){}
+    });
+  }
+
   var rail = document.querySelector(".rail");
   if(rail && "IntersectionObserver" in window){
     var links = {}, obs = new IntersectionObserver(function(es){
@@ -90,4 +100,105 @@
       if(h){ links[id]=a; obs.observe(h); }
     });
   }
+
+  // ---- figure image zoom: tap to enlarge, then click/scroll/pinch to zoom
+  // in further and drag to pan; Esc, the close button, or the backdrop exit ----
+  var lb, lbFrame, lbImg, lbCap, lastFocus;
+  var ZOOM_STEP = 2.4, MAX_ZOOM = 4;
+  var scale = 1, panX = 0, panY = 0;
+  var pointerId = null, downX = 0, downY = 0, moved = false, dragging = false, startPanX = 0, startPanY = 0;
+
+  function buildLb(){
+    lb = document.createElement("div"); lb.id = "img-lightbox";
+    lb.innerHTML = '<button class="lb-close" aria-label="Close">×</button>'
+      + '<div class="lb-frame"><img alt="" draggable="false"></div><div class="lb-cap"></div>';
+    document.body.appendChild(lb);
+    lbFrame = lb.querySelector(".lb-frame"); lbImg = lb.querySelector("img"); lbCap = lb.querySelector(".lb-cap");
+    lb.addEventListener("click", function(e){ if(e.target === lb) closeLb(); });
+    lb.querySelector(".lb-close").addEventListener("click", closeLb);
+    lbCap.addEventListener("click", function(){ lbCap.classList.toggle("expanded"); });
+    lb.addEventListener("wheel", function(e){
+      if(!lb.classList.contains("open")) return;
+      e.preventDefault();
+      zoomAt(e.clientX, e.clientY, scale * Math.exp(-e.deltaY * 0.0015));
+    }, {passive:false});
+    lbImg.addEventListener("pointerdown", function(e){
+      pointerId = e.pointerId; downX = e.clientX; downY = e.clientY; moved = false;
+      dragging = scale > 1; startPanX = panX; startPanY = panY;
+      lbImg.setPointerCapture(pointerId);
+      if(dragging) lbImg.style.cursor = "grabbing";
+    });
+    lbImg.addEventListener("pointermove", function(e){
+      if(pointerId === null || e.pointerId !== pointerId) return;
+      var dx = e.clientX - downX, dy = e.clientY - downY;
+      if(Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      if(dragging){
+        panX = startPanX + dx; panY = startPanY + dy;
+        clampPan(); applyTransform(false);
+      }
+    });
+    function endDrag(e){
+      if(pointerId === null || (e && e.pointerId !== pointerId)) return;
+      if(!moved) zoomAt(downX, downY, scale > 1 ? 1 : ZOOM_STEP);
+      dragging = false; pointerId = null; updateCursor();
+    }
+    lbImg.addEventListener("pointerup", endDrag);
+    lbImg.addEventListener("pointercancel", endDrag);
+  }
+  function stageBox(){
+    var cs = getComputedStyle(lb);
+    return { w: lb.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+             h: lb.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) };
+  }
+  function clampPan(){
+    var st = stageBox();
+    var rw = lbImg.offsetWidth * scale, rh = lbImg.offsetHeight * scale;
+    var maxX = Math.max(0, (rw - st.w) / 2), maxY = Math.max(0, (rh - st.h) / 2);
+    panX = Math.min(maxX, Math.max(-maxX, panX));
+    panY = Math.min(maxY, Math.max(-maxY, panY));
+  }
+  function applyTransform(withTransition){
+    lbImg.style.transition = withTransition ? "transform .18s cubic-bezier(.32,.72,0,1)" : "none";
+    lbImg.style.transform = "translate(" + panX + "px," + panY + "px) scale(" + scale + ")";
+  }
+  function updateCursor(){ lbImg.style.cursor = scale > 1 ? "grab" : "zoom-in"; }
+  function zoomAt(clientX, clientY, target){
+    target = Math.min(MAX_ZOOM, Math.max(1, target));
+    var rect = lbFrame.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    var ratio = target / scale;
+    panX = (clientX - cx) * (1 - ratio) + panX * ratio;
+    panY = (clientY - cy) * (1 - ratio) + panY * ratio;
+    scale = target;
+    clampPan();
+    applyTransform(true);
+    updateCursor();
+  }
+  function resetZoom(){ scale = 1; panX = 0; panY = 0; applyTransform(false); updateCursor(); }
+  function openLb(img){
+    if(!lb) buildLb();
+    lastFocus = document.activeElement;
+    lbImg.src = img.currentSrc || img.src;
+    lbImg.alt = img.alt || "";
+    resetZoom();
+    var cap = img.closest("figure");
+    cap = cap && cap.querySelector("figcaption");
+    lbCap.classList.remove("expanded");
+    lbCap.textContent = cap ? cap.textContent : "";
+    lbCap.hidden = !cap;
+    lb.classList.add("open");
+    lb.querySelector(".lb-close").focus();
+    document.addEventListener("keydown", onLbKey);
+  }
+  function closeLb(){
+    if(!lb || !lb.classList.contains("open")) return;
+    lb.classList.remove("open");
+    document.removeEventListener("keydown", onLbKey);
+    if(lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function onLbKey(e){ if(e.key === "Escape") closeLb(); }
+  document.addEventListener("click", function(e){
+    var img = e.target.closest && e.target.closest("figure:not(.diagram) img");
+    if(img) openLb(img);
+  });
 })();
