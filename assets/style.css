@@ -17,8 +17,11 @@ a:hover{text-decoration:underline}
   background:rgba(11,13,14,.65);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
 .toolbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
-.toolbar .wordmark{display:flex;align-items:center;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--text);font-size:1.05rem}
-.toolbar .wordmark span{color:var(--accent)}
+.toolbar .wordmark{display:flex;align-items:center;line-height:1;flex-shrink:0}
+.toolbar .wordmark img{display:block;height:1.15rem;width:auto}
+.toolbar .wordmark .logo-light{display:none}
+:root[data-theme="light"] .toolbar .wordmark .logo-dark{display:none}
+:root[data-theme="light"] .toolbar .wordmark .logo-light{display:block}
 .toolbar nav{margin-left:auto;display:flex;align-items:center;gap:1.4rem;font-size:.92rem}
 .toolbar nav a{display:flex;align-items:center;flex-shrink:0;white-space:nowrap;line-height:1;color:var(--text2)}
 .toolbar nav a:hover{color:var(--text);text-decoration:none}
@@ -179,8 +182,10 @@ figcaption{padding:.7rem 1rem;font-size:.85rem;color:var(--text2)}
 .hero.centered .wrap{display:flex;flex-direction:column;align-items:center}
 .hero.centered .sub,.hero.centered .meta{margin-left:auto;margin-right:auto}
 .hero.centered .cta{justify-content:center}
-.logo-mark{font-size:clamp(1.9rem,12vw,9rem);font-weight:800;letter-spacing:-.02em;line-height:1}
-.logo-mark span{color:var(--accent)}
+.logo-mark{display:block;width:min(90vw,720px);height:auto}
+.logo-mark .logo-light{display:none}
+:root[data-theme="light"] .logo-mark .logo-dark{display:none}
+:root[data-theme="light"] .logo-mark .logo-light{display:block}
 .hero-search{position:relative;width:min(480px,90vw);margin-top:2.2rem}
 .hero-search input{width:100%;padding:.9rem 1.3rem;border-radius:999px;border:1px solid var(--glass-border);
   background:var(--glass);color:var(--text);font:inherit;font-size:1rem;outline:0}
