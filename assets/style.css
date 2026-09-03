@@ -240,6 +240,10 @@ footer .foot-meta a:hover{color:var(--accent)}
    short title to display:block used to push the full title onto its own line
    still carrying the separator, so every row began with a stray dash. */
 .about .src-list{list-style:none;padding:0;margin:1rem 0 0;border-top:1px solid var(--hair)}
+/* article ul > li draws its own square bullet in a ::before, which list-style
+   cannot switch off and which does not track a grid row. These rows are a
+   table of sources, not a bulleted list, so drop it. */
+.about .src-list li::before{content:none;display:none}
 .about .src-list li{display:grid;gap:.15rem .9rem;padding:.7rem 0;
   border-bottom:1px solid var(--hair);color:var(--text2)}
 @media(min-width:720px){.about .src-list li{grid-template-columns:14rem minmax(0,1fr);align-items:baseline}}
