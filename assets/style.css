@@ -99,19 +99,22 @@ a:hover{text-decoration:underline}
   transition:opacity .55s cubic-bezier(.32,.72,0,1),transform .55s cubic-bezier(.32,.72,0,1)}
 .js-reveal .reveal.in{opacity:1;transform:none}
 /* The hero is the counterpart: Sources arrives by rising into view, the hero
-   leaves by rising out of it. The .wave photo stays put so the band keeps its
-   backdrop once the wordmark has gone. */
+   leaves by rising out of it, photograph included.
+   Tied to scroll position rather than run as a timed transition -- the hero
+   clears the viewport in less than the 550ms a transition would take, so a
+   timed fade finished off-screen and never actually read as a fade. Driving
+   it from --hero-fade keeps it in step with the wheel at any speed. */
 .js-reveal .hero .wrap{will-change:opacity,transform;
-  transition:opacity .55s cubic-bezier(.32,.72,0,1),transform .55s cubic-bezier(.32,.72,0,1)}
-.js-reveal .hero.out .wrap{opacity:0;transform:translateY(-28px)}
-.js-reveal .hero .wave{transition:opacity .55s cubic-bezier(.32,.72,0,1)}
-.js-reveal .hero.out .wave{opacity:0}
+  opacity:calc(1 - var(--hero-fade,0));
+  transform:translateY(calc(var(--hero-fade,0) * -28px))}
+.js-reveal .hero .wave{will-change:opacity;
+  opacity:calc(var(--wave-opacity) * (1 - var(--hero-fade,0)))}
 /* the global reduced-motion rule kills the transition but not the start state,
    which would leave these permanently invisible -- so reset them here */
 @media(prefers-reduced-motion:reduce){
   .js-reveal .reveal,.js-reveal .reveal.in,
-  .js-reveal .hero .wrap,.js-reveal .hero.out .wrap{opacity:1;transform:none;transition:none}
-  .js-reveal .hero .wave,.js-reveal .hero.out .wave{opacity:var(--wave-opacity);transition:none}
+  .js-reveal .hero .wrap{opacity:1;transform:none}
+  .js-reveal .hero .wave{opacity:var(--wave-opacity)}
 }
 .section-sub{color:var(--text2);margin-top:.5rem;max-width:60ch}
 footer{border-top:1px solid var(--hair);margin-top:4rem;padding:3rem 0 4rem;color:var(--text3);font-size:.9rem}

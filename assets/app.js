@@ -290,8 +290,14 @@
       for(var i = 0; i < items.length; i++){
         items[i].classList.toggle("in", items[i].getBoundingClientRect().top < line);
       }
-      // hero leaves once its foot has climbed past the upper half of the screen
-      if(hero) hero.classList.toggle("out", hero.getBoundingClientRect().bottom < h * 0.55);
+      // hero fade runs on scroll position, finishing while it is still on
+      // screen so the fade is actually witnessed rather than completing above
+      // the fold; reversing back up unwinds it by the same measure
+      if(hero){
+        var end = Math.max(1, hero.getBoundingClientRect().bottom + window.pageYOffset - h * 0.45);
+        var p = window.pageYOffset / end;
+        hero.style.setProperty("--hero-fade", (p < 0 ? 0 : p > 1 ? 1 : p).toFixed(3));
+      }
     }
     function onScroll(){
       if(ticking) return;
