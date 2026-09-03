@@ -88,7 +88,17 @@
     if(cur>0){ var prev = el("button","btn ghost","Previous"); prev.onclick=function(){ go(cur-1); }; nav.appendChild(prev); }
     if(cur<QS.length-1){ var next = el("button","btn tint","Next"); next.onclick=function(){ go(cur+1); }; nav.appendChild(next); }
     var fin = el("button","btn fill", MODE==="exam" ? "Submit exam" : "Submit all");
-    fin.onclick = finish;
+    // Submitting ends the paper and scores every unanswered question wrong, so
+    // confirm when questions are still blank. Running out of time still calls
+    // finish() directly -- there is nothing left to confirm at that point.
+    fin.onclick = function(){
+      var blank = 0;
+      for(var i=0;i<QS.length;i++){ if(state[i].picked===null) blank++; }
+      if(blank && !confirm(blank===1
+            ? "1 question is still unanswered and will be marked wrong. Submit anyway?"
+            : blank+" questions are still unanswered and will be marked wrong. Submit anyway?")) return;
+      finish();
+    };
     nav.appendChild(fin);
     mount.appendChild(nav);
   }

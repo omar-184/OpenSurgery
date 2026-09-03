@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard.html
+Disallow: /settings.html
+Disallow: /login.html
+
+Sitemap: https://omar-184.github.io/OpenSurgery/sitemap.xml

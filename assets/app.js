@@ -7,10 +7,28 @@
     if(!idxPromise) idxPromise = fetch(root+"assets/search.json").then(function(r){return r.json();}).then(function(d){ idx=d; return d; });
     idxPromise.then(cb);
   }
+  // Matches are scored, not just filtered. Without this the index order stands,
+  // so a query like "pancreat" returned every Hepatobiliary & Pancreatic topic
+  // in file order and pushed the three whose titles actually match to 4th, 5th
+  // and 6th place behind topics that only matched the category name.
+  function scoreIdx(t, q){
+    var title = t.title.toLowerCase(), cat = t.cat.toLowerCase();
+    var i = title.indexOf(q);
+    if(i === 0) return 100 - title.length / 100;          // title starts with the query
+    if(i > 0){                                            // whole-word match inside the title
+      var w = /[\s(,–-]/.test(title.charAt(i-1));
+      return (w ? 80 : 60) - title.length / 100;
+    }
+    if(cat.indexOf(q) >= 0) return 20 - title.length / 100;
+    return -1;
+  }
   function filterIdx(q){
     q = q.trim().toLowerCase();
     if(!q) return idx.slice(0,12);
-    return idx.filter(function(t){ return t.title.toLowerCase().indexOf(q)>=0 || t.cat.toLowerCase().indexOf(q)>=0; });
+    return idx.map(function(t){ return {t:t, s:scoreIdx(t,q)}; })
+              .filter(function(x){ return x.s >= 0; })
+              .sort(function(a,b){ return b.s - a.s; })
+              .map(function(x){ return x.t; });
   }
   function resultLinks(hits){
     if(!hits.length) return '<p class="no-results">No topics match that search.</p>';

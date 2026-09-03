@@ -62,6 +62,15 @@ a:hover{text-decoration:underline}
   .toolbar nav button.icon-btn{min-width:40px}
 }
 .wrap{max-width:1100px;margin:0 auto;padding:0 clamp(1rem,4vw,2rem)}
+/* Keyboard users land on the toolbar first; this lets them jump the nav on
+   every page. Off-screen until focused, then pinned to the top-left. */
+.skip-link{position:absolute;left:-9999px;top:0;z-index:200;
+  padding:.7rem 1.1rem;border-radius:0 0 10px 0;background:var(--accent);
+  color:#fff;font-weight:600;text-decoration:none}
+.skip-link:focus{left:0}
+#main{scroll-margin-top:5rem}
+#main:focus{outline:none}
+
 .hero{position:relative;padding:clamp(5rem,12vh,9rem) 0 clamp(4rem,10vh,7rem);overflow:hidden}
 :root{--wave-opacity:.2}
 :root[data-theme="light"]{--wave-opacity:.13}
@@ -415,7 +424,10 @@ article h2[id],article h3[id]{scroll-margin-top:4.5rem}
   --glass:rgba(0,0,0,.035);--glass-border:rgba(0,0,0,.1);
   --hair:rgba(0,0,0,.1);--fill:rgba(0,0,0,.03);
   --hover:rgba(0,0,0,.05);--hover-border:rgba(0,0,0,.2);--switch-off:rgba(0,0,0,.22);
-  --good:#248a3d;--good-dim:rgba(36,138,61,.14);--bad:#d70015;--bad-dim:rgba(215,0,21,.1);
+  /* #248a3d gave only 4.04:1 against the light page background, below the WCAG
+     AA 4.5:1 minimum for the "Correct" verdict text and the "Correct answer"
+     tag. #19662f measures 6.5:1. The dim fill is unchanged. */
+  --good:#19662f;--good-dim:rgba(36,138,61,.14);--bad:#d70015;--bad-dim:rgba(215,0,21,.1);
   --amber:rgba(255,179,0,.28)}
 :root[data-theme="light"] .toolbar{background:rgba(245,245,247,.75)}
 :root[data-theme="light"] .toolbar::after{background:linear-gradient(90deg,transparent,rgba(0,0,0,.12),transparent)}
@@ -437,7 +449,12 @@ article h2[id],article h3[id]{scroll-margin-top:4.5rem}
 .hero.centered .wrap{display:flex;flex-direction:column;align-items:center}
 .hero.centered .sub,.hero.centered .meta{margin-left:auto;margin-right:auto}
 .hero.centered .cta{justify-content:center}
-.logo-mark{display:block;width:min(90vw,720px);height:auto}
+/* The home page wordmark is the page's <h1>: it carries the site name, so it
+   belongs in the heading outline for screen readers and search engines. Reset
+   the .hero h1 type rules that would otherwise apply to it -- it holds images,
+   not text. */
+.logo-mark{display:block;width:min(90vw,720px);height:auto;
+  margin:0;font-size:0;line-height:0;font-weight:inherit;letter-spacing:normal;max-width:none}
 .logo-mark .logo-light{display:none}
 :root[data-theme="light"] .logo-mark .logo-dark{display:none}
 :root[data-theme="light"] .logo-mark .logo-light{display:block}
