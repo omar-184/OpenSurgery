@@ -29,8 +29,8 @@
   OS.showToast = showToast;
 
   function pending(){
-    try{ return JSON.parse(localStorage.getItem("os-pending-progress") || "null") || {topic_reads:[], quiz_attempts:[]}; }
-    catch(e){ return {topic_reads:[], quiz_attempts:[]}; }
+    try{ return JSON.parse(localStorage.getItem("os-pending-progress") || "null") || {topic_reads:[], quiz_attempts:[], annotations:[]}; }
+    catch(e){ return {topic_reads:[], quiz_attempts:[], annotations:[]}; }
   }
   function savePending(p){ try{ localStorage.setItem("os-pending-progress", JSON.stringify(p)); }catch(e){} }
   OS.pending = pending;
@@ -38,7 +38,7 @@
 
   OS.claimLocalProgress = function(){
     var p = pending();
-    if(!p.topic_reads.length && !p.quiz_attempts.length) return Promise.resolve();
+    if(!p.topic_reads.length && !p.quiz_attempts.length && !(p.annotations||[]).length) return Promise.resolve();
     return req("/api/progress/import", {method:"POST", body: JSON.stringify(p)}).then(function(r){
       if(r.ok){ localStorage.removeItem("os-pending-progress"); showToast("Your earlier progress on this device was saved."); }
     }).catch(function(){});
