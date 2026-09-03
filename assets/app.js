@@ -279,21 +279,19 @@
     // reports an element that travels from below the viewport to above it
     // within one frame, so a flick-scroll leaves those cards stuck at
     // opacity 0 for good. Comparing positions catches them because anything
-    // already past the top satisfies the same test.
-    var pending = items.slice(), ticking = false;
+    // already past the top satisfies the same test -- and because it is a
+    // position test rather than a one-shot event, it runs equally well in
+    // reverse when the page is scrolled back up.
+    var hero = document.querySelector(".hero"), ticking = false;
     function sweep(){
       ticking = false;
-      var line = window.innerHeight * 0.88;    // reveal a little before the edge
-      for(var i = pending.length - 1; i >= 0; i--){
-        if(pending[i].getBoundingClientRect().top < line){
-          pending[i].classList.add("in");
-          pending.splice(i, 1);                // reveal once, never re-hide
-        }
+      var h = window.innerHeight;
+      var line = h * 0.88;                     // reveal a little before the edge
+      for(var i = 0; i < items.length; i++){
+        items[i].classList.toggle("in", items[i].getBoundingClientRect().top < line);
       }
-      if(!pending.length){
-        window.removeEventListener("scroll", onScroll);
-        window.removeEventListener("resize", onScroll);
-      }
+      // hero leaves once its foot has climbed past the upper half of the screen
+      if(hero) hero.classList.toggle("out", hero.getBoundingClientRect().bottom < h * 0.55);
     }
     function onScroll(){
       if(ticking) return;
