@@ -48,8 +48,10 @@
         var showFb = MODE==="practice" && st.locked;
         if(st.picked===letter) b.classList.add("sel");
         if(showFb && gradeable(q)){
-          if(letter===q.answer) b.classList.add("good");
-          else if(st.picked===letter) b.classList.add("bad");
+          // the good/bad tints are reinforced with a word, so the result is not
+          // carried by colour alone
+          if(letter===q.answer){ b.classList.add("good"); b.appendChild(el("span","opt-tag","Correct answer")); }
+          else if(st.picked===letter){ b.classList.add("bad"); b.appendChild(el("span","opt-tag","Your answer")); }
         }
         if(st.locked) b.disabled = true;
         b.onclick = function(){ if(!st.locked){ st.picked = (st.picked===letter && MODE==="exam") ? null : letter; render(); } };
@@ -60,6 +62,13 @@
       if(st.locked && q.answerText) card.appendChild(el("p","expl","<strong>Answer:</strong> "+q.answerText));
     }
     if(MODE==="practice" && st.locked){
+      if(gradeable(q)){
+        var verdict = el("p","qverdict "+(st.picked===q.answer?"ok":"no"),
+          st.picked===q.answer ? "Correct." : "Incorrect — the answer is "+q.answer+".");
+        verdict.setAttribute("role","status");
+        verdict.setAttribute("aria-live","polite");
+        card.appendChild(verdict);
+      }
       if(gradeable(q) && q.answerText) card.appendChild(el("p","qmeta","<strong>Why:</strong> "+q.answerText));
       if(!gradeable(q) && q.options.length) card.appendChild(el("p","qmeta","Answer key pending for this question; check it against the source below."));
       card.appendChild(el("p","qmeta",q.source));

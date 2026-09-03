@@ -13,6 +13,7 @@
     return idx.filter(function(t){ return t.title.toLowerCase().indexOf(q)>=0 || t.cat.toLowerCase().indexOf(q)>=0; });
   }
   function resultLinks(hits){
+    if(!hits.length) return '<p class="no-results">No topics match that search.</p>';
     return hits.map(function(t){ return '<a href="'+root+t.url+'">'+t.title+'<small>'+t.cat+'</small></a>'; }).join("");
   }
 
@@ -59,7 +60,7 @@
       if(!q){ heroResults.innerHTML = ""; heroResults.classList.remove("open"); return; }
       var hits = filterIdx(q).slice(0,8);
       heroResults.innerHTML = resultLinks(hits);
-      heroResults.classList.toggle("open", hits.length>0);
+      heroResults.classList.add("open");   // stays open on 0 hits to show the empty state
     }
     heroInput.addEventListener("input", function(){ loadIndex(renderHero); });
     heroInput.addEventListener("focus", function(){ loadIndex(renderHero); });
@@ -71,9 +72,13 @@
   // ---- light-mode toggle ----
   var themeBtn = document.getElementById("theme-toggle");
   if(themeBtn) themeBtn.addEventListener("click", function(){
-    var isLight = document.documentElement.getAttribute("data-theme") === "light";
-    if(isLight) document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", "light");
+    var de = document.documentElement;
+    var isLight = de.getAttribute("data-theme") === "light";
+    de.classList.add("theme-switching");
+    if(isLight) de.removeAttribute("data-theme");
+    else de.setAttribute("data-theme", "light");
+    void de.offsetWidth;               // force the recalc while transitions are off
+    setTimeout(function(){ de.classList.remove("theme-switching"); }, 50);
     try{ localStorage.setItem("os-theme", isLight ? "dark" : "light"); }catch(e){}
   });
 
@@ -110,6 +115,8 @@
 
   function buildLb(){
     lb = document.createElement("div"); lb.id = "img-lightbox";
+    lb.setAttribute("role", "dialog"); lb.setAttribute("aria-modal", "true");
+    lb.setAttribute("aria-label", "Enlarged figure");
     lb.innerHTML = '<button class="lb-close" aria-label="Close">×</button>'
       + '<div class="lb-frame"><img alt="" draggable="false"></div><div class="lb-cap"></div>';
     document.body.appendChild(lb);
@@ -197,8 +204,13 @@
     if(lastFocus && lastFocus.focus) lastFocus.focus();
   }
   function onLbKey(e){ if(e.key === "Escape") closeLb(); }
+  function figImg(e){ return e.target.closest && e.target.closest("figure:not(.diagram) img"); }
   document.addEventListener("click", function(e){
-    var img = e.target.closest && e.target.closest("figure:not(.diagram) img");
-    if(img) openLb(img);
+    var img = figImg(e); if(img) openLb(img);
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Enter" && e.key !== " ") return;
+    var img = figImg(e); if(!img) return;
+    e.preventDefault(); openLb(img);
   });
 })();
