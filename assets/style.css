@@ -35,7 +35,11 @@ a:hover{text-decoration:underline}
 .toolbar nav{margin-left:auto;display:flex;align-items:center;gap:1.4rem;font-size:.92rem}
 .toolbar nav a{display:flex;align-items:center;flex-shrink:0;white-space:nowrap;line-height:1;color:var(--text2)}
 .toolbar nav a:hover{color:var(--text);text-decoration:none}
-.toolbar .wordmark .logo-icon{display:none}
+/* the light-theme ".logo-light{display:block}" rule outranks a bare
+   ".logo-icon{display:none}", which showed the icon next to the full
+   lockup in light mode above the phone breakpoint */
+.toolbar .wordmark .logo-icon,
+:root[data-theme="light"] .toolbar .wordmark .logo-icon{display:none}
 /* Phone toolbar: the full lockup plus five nav items overruns 375px and clips
    "Log in", so below 480px the wordmark drops to the square icon and the hit
    areas grow to 44px. */
@@ -117,14 +121,23 @@ mark.anno.anno-ping{animation:annoPing 1.2s ease}
 .anno-count:not(:empty){display:inline-flex;align-items:center;justify-content:center;
   min-width:1.35rem;height:1.35rem;padding:0 .4rem;margin-left:.45rem;border-radius:999px;
   background:var(--accent);color:var(--bg);font-size:.72rem;font-weight:700}
-.rail .rail-action,#rail-drawer .rd-panel .rail-action{display:flex;align-items:center;
-  width:100%;text-align:left;background:transparent;color:var(--text2);cursor:pointer;font:inherit}
-.rail .rail-action{margin-bottom:.6rem;padding:.45rem .8rem;font-size:.85rem;
-  border:0;border-left:2px solid var(--accent);border-radius:0}
-#rail-drawer .rd-panel .rail-action{flex-shrink:0;padding:.95rem 1.1rem;font-size:.95rem;
-  border:0;border-bottom:1px solid var(--hair);border-left:3px solid var(--accent)}
-.rail .rail-action:hover,#rail-drawer .rd-panel .rail-action:hover{color:var(--text);background:var(--hover)}
-.rail .rail-action .ra-label,#rail-drawer .rd-panel .rail-action .ra-label{flex:1 1 auto}
+/* an action, not another section link: tinted pill, accent text, its own icon */
+/* its own softer tint, and the darker accent for the label in light mode:
+   --accent on --accent-dim measured 4.41:1 there, just under AA */
+.rail-action{display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;cursor:pointer;
+  font:inherit;font-weight:600;letter-spacing:-.005em;border-radius:12px;
+  background:rgba(58,163,158,.09);color:var(--accent);border:1px solid rgba(58,163,158,.32);
+  transition:background .15s,color .15s}
+:root[data-theme="light"] .rail-action{background:rgba(32,105,101,.08);color:var(--accent-strong)}
+.rail-action:hover{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.rail-action .ra-icon{width:1rem;height:1rem;flex-shrink:0}
+.rail-action .ra-label{flex:1 1 auto}
+.rail .rail-action{margin-bottom:1rem;padding:.55rem .7rem;font-size:.82rem}
+#rail-drawer .rd-top .rail-action{padding:.7rem .85rem;font-size:.95rem}
+:root[data-theme="light"] .rail-action{border-color:rgba(32,105,101,.34)}
+/* drawer top row: the entry and the close button share one line */
+#rail-drawer .rd-top{display:flex;align-items:center;gap:.6rem;flex-shrink:0;padding:.85rem 1.1rem .6rem}
+#rail-drawer .rd-top .rd-close{flex-shrink:0}
 /* floating toolbar over the selection */
 #anno-bar{position:absolute;z-index:130;display:none;align-items:center;gap:.3rem;
   padding:.35rem;border-radius:12px;background:var(--bg);border:1px solid var(--glass-border);
@@ -313,8 +326,8 @@ article h2[id],article h3[id]{scroll-margin-top:4.5rem}
   display:flex;flex-direction:column;background:var(--bg);border-left:1px solid var(--glass-border);
   transform:translateX(100%);transition:transform .22s cubic-bezier(.32,.72,0,1)}
 #rail-drawer.open .rd-panel{transform:translateX(0)}
-#rail-drawer .rd-head{display:flex;align-items:center;justify-content:space-between;
-  padding:1rem 1.1rem;border-bottom:1px solid var(--hair);font-weight:600}
+#rail-drawer .rd-head{padding:.2rem 1.1rem .7rem;border-bottom:1px solid var(--hair);
+  font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
 #rail-drawer .rd-close{width:44px;height:44px;border:0;background:transparent;color:var(--text2);
   font-size:1.4rem;line-height:1;cursor:pointer;border-radius:10px}
 #rail-drawer .rd-links{overflow-y:auto;padding:.5rem 0 1.5rem}

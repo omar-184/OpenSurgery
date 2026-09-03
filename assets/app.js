@@ -116,8 +116,8 @@
       + ' stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
     var drawer = document.createElement("div"); drawer.id = "rail-drawer";
     drawer.innerHTML = '<div class="rd-panel" role="dialog" aria-modal="true" aria-label="Sections">'
-      + '<div class="rd-head"><span>On this page</span>'
-      + '<button type="button" class="rd-close" aria-label="Close">×</button></div>'
+      + '<div class="rd-top"><button type="button" class="rd-close" aria-label="Close">×</button></div>'
+      + '<div class="rd-head">On this page</div>'
       + '<nav class="rd-links"></nav></div>';
     var rdLinks = drawer.querySelector(".rd-links"), railFocus = null;
     rail.querySelectorAll("a").forEach(function(a){
