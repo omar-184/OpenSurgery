@@ -259,4 +259,49 @@
     var img = figImg(e); if(!img) return;
     e.preventDefault(); openLb(img);
   });
+
+  // ---- home page: fade the Sources block in as it is scrolled to ----
+  var srcHead = document.getElementById("sources");
+  if(srcHead && "IntersectionObserver" in window){
+    var grid = srcHead.parentNode.querySelector(".grid");
+    var items = [srcHead];
+    var sub = srcHead.nextElementSibling;
+    if(sub && sub.classList.contains("section-sub")) items.push(sub);
+    if(grid) items = items.concat(Array.prototype.slice.call(grid.children));
+    document.documentElement.classList.add("js-reveal");
+    items.forEach(function(el, i){
+      el.classList.add("reveal");
+      // stagger by column so a row lights up left-to-right, without the
+      // last card of a 22-card grid waiting on 21 predecessors
+      if(i > 1) el.style.transitionDelay = ((i - 2) % 4) * 70 + "ms";
+    });
+    // A rect sweep rather than an IntersectionObserver: an observer never
+    // reports an element that travels from below the viewport to above it
+    // within one frame, so a flick-scroll leaves those cards stuck at
+    // opacity 0 for good. Comparing positions catches them because anything
+    // already past the top satisfies the same test.
+    var pending = items.slice(), ticking = false;
+    function sweep(){
+      ticking = false;
+      var line = window.innerHeight * 0.88;    // reveal a little before the edge
+      for(var i = pending.length - 1; i >= 0; i--){
+        if(pending[i].getBoundingClientRect().top < line){
+          pending[i].classList.add("in");
+          pending.splice(i, 1);                // reveal once, never re-hide
+        }
+      }
+      if(!pending.length){
+        window.removeEventListener("scroll", onScroll);
+        window.removeEventListener("resize", onScroll);
+      }
+    }
+    function onScroll(){
+      if(ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(sweep);
+    }
+    window.addEventListener("scroll", onScroll, {passive:true});
+    window.addEventListener("resize", onScroll);
+    sweep();
+  }
 })();
