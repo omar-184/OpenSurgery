@@ -227,18 +227,23 @@ mark.anno.anno-ping{animation:annoPing 1.2s ease}
 .section-sub{color:var(--text2);margin-top:.5rem;max-width:60ch}
 footer{border-top:1px solid var(--hair);margin-top:4rem;padding:3rem 0 4rem;color:var(--text3);font-size:.9rem}
 /* The disclaimer is the one piece of the footer that has to be read, so it is
-   set at body size and given a measure, while the meta line stays small. */
-footer .foot-note{max-width:70ch;margin:0 0 1.2rem;color:var(--text2);font-size:.95rem;line-height:1.6}
+   set at body size; the meta line under it stays small. Both run the full
+   width of the page container. */
+footer .foot-note{margin:0 0 1.2rem;color:var(--text2);font-size:.95rem;line-height:1.6}
 footer .foot-note strong{color:var(--text)}
 footer .foot-meta{margin:0;font-size:.85rem}
 footer .foot-meta a{color:var(--text2);text-decoration:underline;text-underline-offset:2px}
 footer .foot-meta a:hover{color:var(--accent)}
-.about{max-width:68ch}
 .about .lede{font-size:1.12rem;line-height:1.65;color:var(--text2)}
 .about h2{margin-top:2.4rem}
+/* Short title and full title are two cells, not one wrapped line: setting the
+   short title to display:block used to push the full title onto its own line
+   still carrying the separator, so every row began with a stray dash. */
 .about .src-list{list-style:none;padding:0;margin:1rem 0 0;border-top:1px solid var(--hair)}
-.about .src-list li{padding:.7rem 0;border-bottom:1px solid var(--hair);color:var(--text2)}
-.about .src-list strong{color:var(--text);display:block;font-size:.95rem}
+.about .src-list li{display:grid;gap:.15rem .9rem;padding:.7rem 0;
+  border-bottom:1px solid var(--hair);color:var(--text2)}
+@media(min-width:720px){.about .src-list li{grid-template-columns:14rem minmax(0,1fr);align-items:baseline}}
+.about .src-list strong{color:var(--text);font-size:.95rem}
 /* ---------- article pages ---------- */
 .page{display:grid;grid-template-columns:minmax(0,1fr);gap:3rem;padding-top:3rem}
 @media(min-width:980px){.page.with-rail{grid-template-columns:minmax(0,1fr) 220px}}
