@@ -59,9 +59,10 @@ a:hover{text-decoration:underline}
 }
 .wrap{max-width:1100px;margin:0 auto;padding:0 clamp(1rem,4vw,2rem)}
 .hero{position:relative;padding:clamp(5rem,12vh,9rem) 0 clamp(4rem,10vh,7rem);overflow:hidden}
-:root[data-theme="light"] .hero .wave{opacity:.13}
+:root{--wave-opacity:.2}
+:root[data-theme="light"]{--wave-opacity:.13}
 .hero .wave{position:absolute;inset:0;background:url(hero.jpg) center/cover no-repeat;
-  opacity:.2;filter:sepia(1) hue-rotate(120deg) saturate(1.9);
+  opacity:var(--wave-opacity);filter:sepia(1) hue-rotate(120deg) saturate(1.9);
   mask-image:linear-gradient(to bottom,transparent,black 30%,black 70%,transparent);
   -webkit-mask-image:linear-gradient(to bottom,transparent,black 30%,black 70%,transparent);pointer-events:none}
 .hero h1{font-size:clamp(2.5rem,6vw,4.5rem);line-height:1.05;letter-spacing:-.02em;font-weight:700;max-width:18ch}
@@ -103,11 +104,14 @@ a:hover{text-decoration:underline}
 .js-reveal .hero .wrap{will-change:opacity,transform;
   transition:opacity .55s cubic-bezier(.32,.72,0,1),transform .55s cubic-bezier(.32,.72,0,1)}
 .js-reveal .hero.out .wrap{opacity:0;transform:translateY(-28px)}
+.js-reveal .hero .wave{transition:opacity .55s cubic-bezier(.32,.72,0,1)}
+.js-reveal .hero.out .wave{opacity:0}
 /* the global reduced-motion rule kills the transition but not the start state,
    which would leave these permanently invisible -- so reset them here */
 @media(prefers-reduced-motion:reduce){
   .js-reveal .reveal,.js-reveal .reveal.in,
   .js-reveal .hero .wrap,.js-reveal .hero.out .wrap{opacity:1;transform:none;transition:none}
+  .js-reveal .hero .wave,.js-reveal .hero.out .wave{opacity:var(--wave-opacity);transition:none}
 }
 .section-sub{color:var(--text2);margin-top:.5rem;max-width:60ch}
 footer{border-top:1px solid var(--hair);margin-top:4rem;padding:3rem 0 4rem;color:var(--text3);font-size:.9rem}
