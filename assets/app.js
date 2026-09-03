@@ -106,6 +106,52 @@
     });
   }
 
+  // ---- mobile section drawer: the rail is hidden under 980px, so the same
+  // links get a slide-in menu reachable from a floating button ----
+  if(rail && rail.querySelector("a")){
+    var fab = document.createElement("button");
+    fab.id = "rail-fab"; fab.type = "button";
+    fab.setAttribute("aria-label", "Sections"); fab.setAttribute("aria-expanded", "false");
+    fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+      + ' stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
+    var drawer = document.createElement("div"); drawer.id = "rail-drawer";
+    drawer.innerHTML = '<div class="rd-panel" role="dialog" aria-modal="true" aria-label="Sections">'
+      + '<div class="rd-head"><span>On this page</span>'
+      + '<button type="button" class="rd-close" aria-label="Close">×</button></div>'
+      + '<nav class="rd-links"></nav></div>';
+    var rdLinks = drawer.querySelector(".rd-links"), railFocus = null;
+    rail.querySelectorAll("a").forEach(function(a){
+      var c = document.createElement("a");
+      c.href = a.getAttribute("href"); c.textContent = a.textContent;
+      c.addEventListener("click", closeRail);
+      rdLinks.appendChild(c);
+    });
+    function syncActive(){
+      var on = rail.querySelector("a.on"), href = on && on.getAttribute("href");
+      rdLinks.querySelectorAll("a").forEach(function(a){
+        a.classList.toggle("on", href != null && a.getAttribute("href") === href);
+      });
+    }
+    function openRail(){
+      syncActive();
+      railFocus = document.activeElement;
+      drawer.classList.add("open"); fab.setAttribute("aria-expanded", "true");
+      drawer.querySelector(".rd-close").focus();
+      document.addEventListener("keydown", onRailKey);
+    }
+    function closeRail(){
+      if(!drawer.classList.contains("open")) return;
+      drawer.classList.remove("open"); fab.setAttribute("aria-expanded", "false");
+      document.removeEventListener("keydown", onRailKey);
+      if(railFocus && railFocus.focus) railFocus.focus();
+    }
+    function onRailKey(e){ if(e.key === "Escape") closeRail(); }
+    fab.addEventListener("click", openRail);
+    drawer.addEventListener("click", function(e){ if(e.target === drawer) closeRail(); });
+    drawer.querySelector(".rd-close").addEventListener("click", closeRail);
+    document.body.appendChild(fab); document.body.appendChild(drawer);
+  }
+
   // ---- figure image zoom: tap to enlarge, then click/scroll/pinch to zoom
   // in further and drag to pan; Esc, the close button, or the backdrop exit ----
   var lb, lbFrame, lbImg, lbCap, lastFocus;
