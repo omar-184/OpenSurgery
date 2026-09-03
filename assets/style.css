@@ -201,7 +201,7 @@ article tr:last-child td{border-bottom:0}
 .quiz-head .timer{margin-left:auto;font:600 1.1rem ui-monospace,monospace;color:var(--accent)}
 .quiz-head .timer.low{color:var(--bad)}
 .dots{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1.6rem}
-@media(max-width:600px){.dots button{width:2.25rem!important;height:2.25rem!important}}
+@media(max-width:600px){.dots button{width:2.75rem!important;height:2.75rem!important}}
 .dots button{width:1.7rem;height:1.7rem;border-radius:7px;border:1px solid var(--glass-border);
   background:var(--glass);color:var(--text3);font-size:.72rem;cursor:pointer;position:relative}
 .dots button.cur{border-color:var(--accent);color:var(--accent)}
