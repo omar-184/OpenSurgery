@@ -375,21 +375,24 @@
         }
       }catch(e){}
     }
-    // panel entry: into the contents side menu, on the rail and in the drawer
-    var entry = '<span class="ra-label">Notes &amp; highlights</span>' +
-                '<span class="anno-count"></span>';
-    [document.querySelector(".rail"),
-     document.querySelector("#rail-drawer .rd-links")].forEach(function(host){
-      if(!host) return;
+    // panel entry: the first thing in the contents side menu, above the
+    // section list on the rail and above the drawer's "On this page" header
+    function entryButton(){
       var b = document.createElement("button");
-      b.type = "button"; b.className = "rail-action"; b.innerHTML = entry;
+      b.type = "button"; b.className = "rail-action";
+      b.innerHTML = '<span class="ra-label">Notes &amp; highlights</span>' +
+                    '<span class="anno-count"></span>';
       b.addEventListener("click", function(){
         var d = document.getElementById("rail-drawer");
         if(d) d.classList.remove("open");
         openPanel();
       });
-      host.appendChild(b);
-    });
+      return b;
+    }
+    var rail = document.querySelector(".rail");
+    if(rail) rail.insertBefore(entryButton(), rail.firstChild);
+    var panelBox = document.querySelector("#rail-drawer .rd-panel");
+    if(panelBox) panelBox.insertBefore(entryButton(), panelBox.firstChild);
   }
 
   // ---------- wiring ----------
