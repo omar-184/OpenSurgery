@@ -234,6 +234,40 @@ footer .foot-note strong{color:var(--text)}
 footer .foot-meta{margin:0;font-size:.85rem}
 footer .foot-meta a{color:var(--text2);text-decoration:underline;text-underline-offset:2px}
 footer .foot-meta a:hover{color:var(--accent)}
+/* Full-text results sit under the title matches, visually subordinate to
+   them: a label, then the topic, the section it was found in, and the
+   matching phrase in context. */
+.ft-head{padding:.75rem 1.1rem .3rem;font-size:.72rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text3);border-top:1px solid var(--hair);margin-top:.4rem}
+a.ft{display:block;padding:.55rem 1.1rem .7rem}
+a.ft small{display:inline;margin-left:.5rem;color:var(--text3)}
+.ft-snip{display:block;margin-top:.25rem;font-size:.85rem;line-height:1.5;
+  color:var(--text3);overflow:hidden;text-overflow:ellipsis;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ft-snip mark{background:var(--accent-dim);color:var(--text);padding:0 .12em;border-radius:2px}
+
+/* Library: every topic, grouped by specialty, filtered client-side. */
+.all-topics{margin-top:4rem;border-top:1px solid var(--hair);padding-top:2.2rem}
+.all-head{display:flex;flex-wrap:wrap;gap:1rem;align-items:baseline;justify-content:space-between}
+.all-head h2{margin:0;font-size:1.35rem;letter-spacing:-.01em}
+.all-filter{display:flex;align-items:center;gap:.7rem}
+.all-filter input{width:min(300px,60vw);padding:.55rem .9rem;border-radius:999px;
+  border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font:inherit;font-size:.92rem}
+.all-filter input:focus{border-color:var(--accent);outline:none}
+#topic-count{color:var(--text3);font-size:.85rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.all-group{margin-top:2rem}
+.all-group h3{display:flex;align-items:center;gap:.6rem;margin:0 0 .7rem;
+  font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);font-weight:600}
+.all-group h3 .glyph{font-size:1rem;color:var(--accent)}
+.all-group h3 small{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none}
+.all-group ul{list-style:none;margin:0;padding:0;
+  display:grid;gap:.15rem 1.6rem;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.all-group li::before{content:none}
+.all-group li{margin:0;padding:0}
+.all-group li a{display:block;padding:.42rem 0;color:var(--text2);border-bottom:1px solid transparent}
+.all-group li a:hover{color:var(--accent);text-decoration:none;border-bottom-color:var(--hair)}
+.no-results{color:var(--text3);margin-top:1.5rem}
+
 .about .lede{font-size:1.12rem;line-height:1.65;color:var(--text2)}
 .about h2{margin-top:2.4rem}
 /* Short title and full title are two cells, not one wrapped line: setting the

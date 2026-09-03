@@ -30,9 +30,62 @@
               .sort(function(a,b){ return b.s - a.s; })
               .map(function(x){ return x.t; });
   }
-  function resultLinks(hits){
-    if(!hits.length) return '<p class="no-results">No topics match that search.</p>';
-    return hits.map(function(t){ return '<a href="'+root+t.url+'">'+t.title+'<small>'+t.cat+'</small></a>'; }).join("");
+  // ---- full text ------------------------------------------------------
+  // A second, larger index holding each topic's prose by section. It is only
+  // fetched once someone actually types, so an ordinary page view never pays
+  // for it. Title matches above still win; this only adds topics whose text
+  // mentions the term -- "Alvarado", "Tokyo", a drug name -- which the title
+  // index alone can never find.
+  var ft = null, ftPromise = null;
+  function loadFull(cb){
+    if(ft) return cb(ft);
+    if(!ftPromise) ftPromise = fetch(root+"assets/fulltext.json")
+      .then(function(r){ return r.json(); })
+      .then(function(d){ ft = d; return d; })
+      .catch(function(){ ft = []; return ft; });
+    ftPromise.then(cb);
+  }
+  function esc(s){ return s.replace(/[&<>]/g, function(c){
+    return c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"; }); }
+  function snippet(text, q){
+    var i = text.toLowerCase().indexOf(q);
+    if(i < 0) return "";
+    var a = Math.max(0, i - 60), b = Math.min(text.length, i + q.length + 90);
+    return (a > 0 ? "…" : "") + esc(text.slice(a, i))
+         + "<mark>" + esc(text.slice(i, i + q.length)) + "</mark>"
+         + esc(text.slice(i + q.length, b)) + (b < text.length ? "…" : "");
+  }
+  function fullHits(q, exclude){
+    if(!ft || q.length < 3) return [];
+    var seen = {}, out = [];
+    exclude.forEach(function(t){ seen[t.url] = 1; });
+    for(var i = 0; i < ft.length && out.length < 8; i++){
+      var d = ft[i];
+      if(seen[d.u]) continue;
+      for(var j = 0; j < d.s.length; j++){
+        var sec = d.s[j];
+        if(sec[1].toLowerCase().indexOf(q) >= 0 ||
+           (sec[0] && sec[0].toLowerCase().indexOf(q) >= 0)){
+          out.push({title: d.t, cat: d.c, url: d.u,
+                    section: sec[0], snip: snippet(sec[1], q)});
+          seen[d.u] = 1;
+          break;
+        }
+      }
+    }
+    return out;
+  }
+  function resultLinks(hits, extra, q){
+    var html = hits.map(function(t){
+      return '<a href="'+root+t.url+'">'+t.title+'<small>'+t.cat+'</small></a>'; }).join("");
+    if(extra && extra.length){
+      html += '<div class="ft-head">Mentioned in</div>' + extra.map(function(t){
+        return '<a class="ft" href="'+root+t.url+'">'+t.title
+             + (t.section ? '<small>'+t.section+'</small>' : '')
+             + (t.snip ? '<span class="ft-snip">'+t.snip+'</span>' : '')+'</a>'; }).join("");
+    }
+    if(!html) return '<p class="no-results">Nothing matches that search.</p>';
+    return html;
   }
 
   // ---- command palette (Ctrl/Cmd+K) ----
@@ -55,7 +108,13 @@
   function mark(items){ items.forEach(function(a,i){ a.classList.toggle("sel", i===sel); if(i===sel) a.scrollIntoView({block:"nearest"}); }); }
   function render(){
     sel = -1;
-    results.innerHTML = resultLinks(filterIdx(input.value));
+    var q = input.value.trim().toLowerCase();
+    var hits = filterIdx(input.value);
+    results.innerHTML = resultLinks(hits, fullHits(q, hits), q);
+    // the body index arrives after the first keystroke; redraw when it lands
+    if(q.length >= 3 && !ft) loadFull(function(){
+      if(input.value.trim().toLowerCase() === q) render();
+    });
   }
   function open(){
     if(!palette) build();
@@ -76,9 +135,13 @@
     function renderHero(){
       var q = heroInput.value.trim();
       if(!q){ heroResults.innerHTML = ""; heroResults.classList.remove("open"); return; }
+      var lq = q.toLowerCase();
       var hits = filterIdx(q).slice(0,8);
-      heroResults.innerHTML = resultLinks(hits);
+      heroResults.innerHTML = resultLinks(hits, fullHits(lq, hits), lq);
       heroResults.classList.add("open");   // stays open on 0 hits to show the empty state
+      if(lq.length >= 3 && !ft) loadFull(function(){
+        if(heroInput.value.trim().toLowerCase() === lq) renderHero();
+      });
     }
     heroInput.addEventListener("input", function(){ loadIndex(renderHero); });
     heroInput.addEventListener("focus", function(){ loadIndex(renderHero); });
