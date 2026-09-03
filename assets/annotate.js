@@ -323,8 +323,10 @@
       if(filterKey === "note") return !!a.note || a.kind === "note";
       return a.color === filterKey;
     });
-    var btn = document.getElementById("anno-panel-btn");
-    if(btn) btn.querySelector(".anno-count").textContent = annos.length ? annos.length : "";
+    var badges = document.querySelectorAll(".rail-action .anno-count");
+    for(var b = 0; b < badges.length; b++){
+      badges[b].textContent = annos.length ? annos.length : "";
+    }
     if(!rows.length){
       panelList.innerHTML = '<p class="ap-empty">' +
         (annos.length ? "Nothing matches this filter." :
@@ -352,30 +354,42 @@
 
   // ---------- controls in the title row ----------
   function buildControls(){
-    var host = document.querySelector(".topic-actions") || article;
-    var wrap = document.createElement("div");
-    wrap.className = "anno-controls";
-    wrap.innerHTML =
-      '<button type="button" class="btn tint" id="anno-panel-btn">' +
-        'Notes &amp; highlights <span class="anno-count"></span></button>' +
-      '<button type="button" class="btn tint" id="anno-toggle-btn" aria-pressed="true">' +
-        "Hide marks</button>";
-    host.appendChild(wrap);
-    document.getElementById("anno-panel-btn").addEventListener("click", openPanel);
-    var t = document.getElementById("anno-toggle-btn");
-    t.addEventListener("click", function(){
-      var nowHidden = !document.documentElement.classList.contains("annos-off");
-      document.documentElement.classList.toggle("annos-off", nowHidden);
-      t.textContent = nowHidden ? "Show marks" : "Hide marks";
-      t.setAttribute("aria-pressed", nowHidden ? "false" : "true");
-      try{ localStorage.setItem("os-annos-off", nowHidden ? "1" : "0"); }catch(e){}
+    // marks switch: top of the article, on the same row as the UK toggle and
+    // built to the same pill so the two line up
+    var tools = document.querySelector(".title-tools");
+    if(tools){
+      var lab = document.createElement("label");
+      lab.className = "uk-toggle"; lab.setAttribute("for", "anno-toggle");
+      lab.innerHTML = '<span class="switch"><input type="checkbox" id="anno-toggle" checked>' +
+        '<span class="slider"></span></span>Marks';
+      tools.appendChild(lab);
+      var cb = lab.querySelector("input");
+      cb.addEventListener("change", function(){
+        document.documentElement.classList.toggle("annos-off", !cb.checked);
+        try{ localStorage.setItem("os-annos-off", cb.checked ? "0" : "1"); }catch(e){}
+      });
+      try{
+        if(localStorage.getItem("os-annos-off") === "1"){
+          cb.checked = false;
+          document.documentElement.classList.add("annos-off");
+        }
+      }catch(e){}
+    }
+    // panel entry: into the contents side menu, on the rail and in the drawer
+    var entry = '<span class="ra-label">Notes &amp; highlights</span>' +
+                '<span class="anno-count"></span>';
+    [document.querySelector(".rail"),
+     document.querySelector("#rail-drawer .rd-links")].forEach(function(host){
+      if(!host) return;
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "rail-action"; b.innerHTML = entry;
+      b.addEventListener("click", function(){
+        var d = document.getElementById("rail-drawer");
+        if(d) d.classList.remove("open");
+        openPanel();
+      });
+      host.appendChild(b);
     });
-    try{
-      if(localStorage.getItem("os-annos-off") === "1"){
-        document.documentElement.classList.add("annos-off");
-        t.textContent = "Show marks"; t.setAttribute("aria-pressed", "false");
-      }
-    }catch(e){}
   }
 
   // ---------- wiring ----------

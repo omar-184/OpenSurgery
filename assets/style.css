@@ -113,10 +113,17 @@ mark.anno.anno-ping{animation:annoPing 1.2s ease}
 .annos-off mark.anno{background:none!important;border-bottom:0!important;
   text-decoration:none!important;color:inherit!important;cursor:auto}
 .annos-off mark.anno .anno-flag{display:none}
-.anno-controls{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.9rem}
+/* the marks switch is built to the same pill as the UK toggle beside it */
 .anno-count:not(:empty){display:inline-flex;align-items:center;justify-content:center;
-  min-width:1.35rem;height:1.35rem;padding:0 .35rem;margin-left:.35rem;border-radius:999px;
-  background:var(--accent);color:var(--bg);font-size:.75rem;font-weight:700}
+  min-width:1.35rem;height:1.35rem;padding:0 .4rem;margin-left:.45rem;border-radius:999px;
+  background:var(--accent);color:var(--bg);font-size:.72rem;font-weight:700}
+.rail .rail-action,#rail-drawer .rd-links .rail-action{display:flex;align-items:center;
+  width:100%;text-align:left;background:transparent;color:var(--text2);cursor:pointer;font:inherit}
+.rail .rail-action{margin-top:.7rem;padding:.45rem .8rem;font-size:.85rem;
+  border:0;border-left:2px solid var(--accent);border-radius:0}
+#rail-drawer .rd-links .rail-action{margin-top:.5rem;padding:.85rem 1.1rem;font-size:.95rem;
+  border:0;border-top:1px solid var(--hair);border-left:3px solid var(--accent)}
+.rail .rail-action:hover,#rail-drawer .rd-links .rail-action:hover{color:var(--text);background:var(--hover)}
 /* floating toolbar over the selection */
 #anno-bar{position:absolute;z-index:130;display:none;align-items:center;gap:.3rem;
   padding:.35rem;border-radius:12px;background:var(--bg);border:1px solid var(--glass-border);
@@ -249,12 +256,15 @@ article tr:last-child td{border-bottom:0}
 /* ---------- title row + UK guidelines toggle ---------- */
 .title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;flex-wrap:wrap}
 .title-row h1{margin-bottom:0;flex:1 1 auto}
-.uk-toggle{display:inline-flex;align-items:center;gap:.65rem;flex-shrink:0;margin-top:.5rem;
+/* every article-level control shares this row so they align to one baseline */
+.title-tools{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;flex-shrink:0;margin-top:.5rem}
+.title-tools:empty{display:none}
+.uk-toggle{display:inline-flex;align-items:center;gap:.65rem;flex-shrink:0;
   padding:.5rem .9rem;border-radius:999px;background:var(--accent-dim);
   border:1px solid rgba(58,163,158,.3);font-size:.82rem;color:var(--text2);cursor:pointer;
   white-space:nowrap;user-select:none}
 .uk-toggle:hover{color:var(--text)}
-@media(max-width:600px){.title-row{gap:.9rem}.uk-toggle{margin-top:0}}
+@media(max-width:600px){.title-row{gap:.9rem}.title-tools{margin-top:0}}
 .switch{position:relative;display:inline-block;width:2.3rem;height:1.32rem;flex-shrink:0}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
 .switch .slider{position:absolute;inset:0;background:var(--switch-off);border-radius:999px;
