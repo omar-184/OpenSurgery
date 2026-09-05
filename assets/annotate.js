@@ -330,7 +330,7 @@
     if(!rows.length){
       panelList.innerHTML = '<p class="ap-empty">' +
         (annos.length ? "Nothing matches this filter." :
-         "Select any text in the article to highlight it or attach a note.") + "</p>";
+         "Close this panel, then select any text in the article to highlight it or attach a note.") + "</p>";
       return;
     }
     panelList.innerHTML = rows.map(function(a){
