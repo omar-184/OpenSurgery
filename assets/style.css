@@ -93,6 +93,8 @@ a:hover{text-decoration:underline}
 .btn.tint:hover{text-decoration:none;background:rgba(58,163,158,.22)}
 .btn.ghost{background:transparent;color:var(--text2);border:1px solid var(--glass-border)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin:2.5rem 0 6rem}
+.grid.src-grid{margin:1rem 0 3rem}
+.src-group-title{font-size:1.3rem;font-weight:700;letter-spacing:-.01em;margin:2rem 0 0}
 .card{position:relative;display:block;padding:1.4rem 1.4rem 1.2rem;border-radius:var(--radius);
   background:var(--glass);border:1px solid var(--glass-border);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
