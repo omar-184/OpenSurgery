@@ -4,8 +4,18 @@
 
   var COLORS = ["amber","green","blue","pink"];
   var KIND_LABEL = {highlight:"Highlight", underline:"Underline", strike:"Strikethrough", note:"Note"};
+  // annotation mode arms one of these; selecting text then applies it directly
+  var TOOLS = COLORS.map(function(c){
+    return {key:"highlight:" + c, act:"highlight", color:c, label:"Highlight " + c, face:""};
+  }).concat([
+    {key:"underline", act:"underline", label:"Underline", face:"<u>U</u>"},
+    {key:"strike", act:"strike", label:"Strikethrough", face:"<s>S</s>"},
+    {key:"note", act:"note", label:"Add note", face:"✎"},
+    {key:"erase", act:"erase", label:"Eraser — click a mark, or select text, to remove", face:"⌫"}
+  ]);
 
   var article, SLUG, annos = [], toolbar, panel, panelList, filterKey = "";
+  var dock, mode = false, tool = null;
 
   // ---------- storage: the API when signed in, localStorage otherwise ----------
   function localAll(){
@@ -217,10 +227,46 @@
     renderAll(); renderPanel();
     save(a);
   }
-  function removeAnno(id){
-    annos = annos.filter(function(a){ return a.id !== id; });
+  function removeAnnos(ids){
+    if(!ids || !ids.length) return;
+    var kill = {};
+    ids.forEach(function(id){ kill[id] = 1; });
+    annos = annos.filter(function(a){ return !kill[a.id]; });
     renderAll(); renderPanel();
-    drop(id);
+    ids.forEach(drop);
+  }
+  function removeAnno(id){ removeAnnos([id]); }
+  // Only ever the marks this script painted: a data-anno-id is the proof one
+  // came from the user. The article's own <mark> runs (figures, key values)
+  // carry neither the class nor the id, so the eraser cannot reach them.
+  function annoIdsIn(range){
+    var seen = {}, out = [], marks = article.querySelectorAll("mark.anno[data-anno-id]");
+    for(var i = 0; i < marks.length; i++){
+      if(!range.intersectsNode(marks[i])) continue;
+      var id = marks[i].getAttribute("data-anno-id");
+      if(!seen[id]){ seen[id] = 1; out.push(id); }
+    }
+    return out;
+  }
+  function selectionRange(){
+    var sel = window.getSelection();
+    if(!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    var r = sel.getRangeAt(0);
+    return article.contains(r.commonAncestorContainer) ? r : null;
+  }
+  function eraseSelection(){
+    var r = selectionRange();
+    if(!r) return;
+    var ids = annoIdsIn(r);
+    if(!ids.length) return;
+    window.getSelection().removeAllRanges();
+    hideToolbar();
+    removeAnnos(ids);
+  }
+  function eraseAll(){
+    if(!annos.length) return;
+    if(!window.confirm("Remove all " + annos.length + " marks on this page? This cannot be undone.")) return;
+    removeAnnos(annos.map(function(a){ return a.id; }));
   }
   function editNote(id){
     var a = annos.filter(function(x){ return x.id === id; })[0];
@@ -247,23 +293,31 @@
     html += '<span class="anno-sep"></span>' +
       '<button type="button" data-act="underline" aria-label="Underline (U)"><u>U</u></button>' +
       '<button type="button" data-act="strike" aria-label="Strikethrough (S)"><s>S</s></button>' +
-      '<button type="button" data-act="note" aria-label="Add note (N)">✎</button>';
+      '<button type="button" data-act="note" aria-label="Add note (N)">✎</button>' +
+      '<button type="button" data-act="erase" aria-label="Erase marks in selection (E)" hidden>⌫</button>';
     toolbar.innerHTML = html;
     document.body.appendChild(toolbar);
     toolbar.addEventListener("mousedown", function(e){ e.preventDefault(); });
     toolbar.addEventListener("click", function(e){
       var b = e.target.closest("button[data-act]");
       if(!b) return;
-      create(b.getAttribute("data-act"), b.getAttribute("data-color"));
+      var act = b.getAttribute("data-act");
+      if(act === "erase") return eraseSelection();
+      create(act, b.getAttribute("data-color"));
     });
   }
   function showToolbar(){
+    // in annotation mode the armed tool applies on selection, so the floating
+    // bar would only be a second way to do the same thing
+    if(mode && tool) return hideToolbar();
     var sel = window.getSelection();
     if(!sel || sel.isCollapsed || !sel.rangeCount) return hideToolbar();
     var r = sel.getRangeAt(0);
     if(!article.contains(r.commonAncestorContainer)) return hideToolbar();
     var box = r.getBoundingClientRect();
     if(!box.width && !box.height) return hideToolbar();
+    var er = toolbar.querySelector('button[data-act="erase"]');
+    if(er) er.hidden = !annoIdsIn(r).length;
     toolbar.classList.add("open");
     var top = box.top + window.pageYOffset - toolbar.offsetHeight - 10;
     var left = box.left + window.pageXOffset + box.width / 2 - toolbar.offsetWidth / 2;
@@ -273,6 +327,71 @@
     toolbar.style.left = left + "px";
   }
   function hideToolbar(){ if(toolbar) toolbar.classList.remove("open"); }
+
+  // ---------- annotation mode: bottom dock ----------
+  function buildDock(){
+    dock = document.createElement("div");
+    dock.id = "anno-dock";
+    var html = '<div class="ad-in" role="toolbar" aria-label="Annotation tools">';
+    TOOLS.forEach(function(t){
+      html += '<button type="button" data-tool="' + t.key + '" aria-pressed="false"' +
+        (t.color ? ' class="anno-swatch anno-c-' + t.color + '"' : "") +
+        ' aria-label="' + t.label + '" title="' + t.label + '">' + (t.face || "") + "</button>";
+    });
+    html += '<span class="ad-sep"></span>' +
+      '<button type="button" class="ad-text ad-wipe" data-wipe="1">Erase all</button>' +
+      '<span class="ad-hint" id="ad-hint"></span>' +
+      '<span class="ad-sep"></span>' +
+      '<button type="button" class="ad-text" data-exit="1">Done</button></div>';
+    dock.innerHTML = html;
+    document.body.appendChild(dock);
+    dock.addEventListener("mousedown", function(e){ e.preventDefault(); });
+    dock.addEventListener("click", function(e){
+      var b = e.target.closest("button");
+      if(!b) return;
+      if(b.hasAttribute("data-exit")) return setMode(false);
+      if(b.hasAttribute("data-wipe")) return eraseAll();
+      var key = b.getAttribute("data-tool");
+      if(key) setTool(tool && tool.key === key ? null : key);
+    });
+  }
+  function setTool(key){
+    tool = null;
+    for(var i = 0; i < TOOLS.length && key; i++){
+      if(TOOLS[i].key === key) tool = TOOLS[i];
+    }
+    if(dock){
+      dock.querySelectorAll("button[data-tool]").forEach(function(b){
+        b.setAttribute("aria-pressed", tool && b.getAttribute("data-tool") === tool.key ? "true" : "false");
+      });
+    }
+    document.documentElement.classList.toggle("anno-erase", !!(mode && tool && tool.act === "erase"));
+    try{ localStorage.setItem("os-anno-tool", tool ? tool.key : ""); }catch(e){}
+    if(tool) hideToolbar();
+    renderHint();
+  }
+  function renderHint(){
+    var h = document.getElementById("ad-hint");
+    if(!h) return;
+    h.textContent = !tool ? "Pick a tool, or select text for the usual popup"
+      : tool.act === "erase" ? "Click a mark, or select text, to erase"
+      : "Select text to " + (tool.act === "highlight" ? "highlight" : tool.label.toLowerCase());
+  }
+  function setMode(on){
+    mode = !!on;
+    document.documentElement.classList.toggle("anno-mode", mode);
+    document.documentElement.classList.toggle("anno-erase", !!(mode && tool && tool.act === "erase"));
+    var cb = document.getElementById("anno-mode-toggle");
+    if(cb) cb.checked = mode;
+    if(mode){ hideToolbar(); renderHint(); }
+    try{ localStorage.setItem("os-anno-mode", mode ? "1" : "0"); }catch(e){}
+  }
+  // with a tool armed the selection is the whole gesture -- no popup to answer
+  function applyArmed(){
+    if(!mode || !tool || !selectionRange()) return;
+    if(tool.act === "erase") return eraseSelection();
+    create(tool.act, tool.color || null);
+  }
 
   // ---------- notes panel ----------
   function buildPanel(){
@@ -374,6 +493,14 @@
           document.documentElement.classList.add("annos-off");
         }
       }catch(e){}
+      // annotation mode: same pill, off unless asked for, so nothing about the
+      // ordinary select-then-choose flow changes for anyone who ignores it
+      var modeLab = document.createElement("label");
+      modeLab.className = "uk-toggle"; modeLab.setAttribute("for", "anno-mode-toggle");
+      modeLab.innerHTML = '<span class="switch"><input type="checkbox" id="anno-mode-toggle">' +
+        '<span class="slider"></span></span>Annotate';
+      tools.appendChild(modeLab);
+      modeLab.querySelector("input").addEventListener("change", function(e){ setMode(e.target.checked); });
     }
     // panel entry: the first thing in the contents side menu, above the
     // section list on the rail and above the drawer's "On this page" header
@@ -409,27 +536,38 @@
     });
     article.addEventListener("click", function(e){
       var m = e.target.closest("mark.anno");
-      if(m) editNote(m.getAttribute("data-anno-id"));
+      if(m) hitMark(m);
     });
     article.addEventListener("keydown", function(e){
       if(e.key !== "Enter" && e.key !== " ") return;
       var m = e.target.closest && e.target.closest("mark.anno");
       if(!m) return;
-      e.preventDefault(); editNote(m.getAttribute("data-anno-id"));
+      e.preventDefault(); hitMark(m);
     });
+    // the armed tool fires once the drag settles, not mid-selection
+    article.addEventListener("mouseup", function(){ setTimeout(applyArmed, 0); });
+    article.addEventListener("touchend", function(){ setTimeout(applyArmed, 0); });
+  }
+  function hitMark(m){
+    var id = m.getAttribute("data-anno-id");
+    if(mode && tool && tool.act === "erase") return removeAnnos([id]);
+    editNote(id);
   }
   function wireKeys(){
     document.addEventListener("keydown", function(e){
       if(e.metaKey || e.ctrlKey || e.altKey) return;
       var t = e.target;
       if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.nodeName))) return;
+      // Escape leaves annotation mode, unless the panel is up and owns it
+      if(e.key === "Escape" && mode && !(panel && panel.classList.contains("open"))){
+        e.preventDefault(); return setMode(false);
+      }
       var k = e.key.toLowerCase();
-      var map = {h:"highlight", u:"underline", s:"strike", n:"note"};
+      var map = {h:"highlight", u:"underline", s:"strike", n:"note", e:"erase"};
       if(!map[k]) return;
-      var sel = window.getSelection();
-      if(!sel || sel.isCollapsed || !sel.rangeCount) return;
-      if(!article.contains(sel.getRangeAt(0).commonAncestorContainer)) return;
+      if(!selectionRange()) return;
       e.preventDefault();
+      if(k === "e") return eraseSelection();
       create(map[k], k === "h" ? COLORS[0] : null);
     });
   }
@@ -439,7 +577,11 @@
     article = document.querySelector("article");
     if(!article || !btn || !btn.dataset.topicSlug) return;   // topic pages only
     SLUG = btn.dataset.topicSlug;
-    buildToolbar(); buildPanel(); buildControls();
+    buildToolbar(); buildPanel(); buildDock(); buildControls();
+    try{
+      setTool(localStorage.getItem("os-anno-tool") || null);
+      if(localStorage.getItem("os-anno-mode") === "1") setMode(true);
+    }catch(e){}
     load().then(function(rows){
       annos = rows || [];
       renderAll(); renderPanel();

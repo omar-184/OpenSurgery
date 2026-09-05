@@ -164,6 +164,36 @@ mark.anno.anno-ping{animation:annoPing 1.2s ease}
 #anno-bar .anno-swatch.anno-c-blue{background:var(--anno-blue)}
 #anno-bar .anno-swatch.anno-c-pink{background:var(--anno-pink)}
 #anno-bar .anno-sep{width:1px;height:22px;background:var(--hair);margin:0 .15rem}
+#anno-bar button[data-act="erase"]{color:var(--bad)}
+/* Annotation mode: opt-in, off by default. One tool stays armed in a dock at
+   the bottom, so a long read is marked up by selecting text rather than
+   answering the floating bar every time. */
+#anno-dock{position:fixed;left:0;right:0;bottom:0;z-index:135;display:none;justify-content:center;
+  padding:0 .7rem calc(.7rem + env(safe-area-inset-bottom));pointer-events:none}
+html.anno-mode #anno-dock{display:flex}
+html.anno-mode body{padding-bottom:5.5rem}
+#anno-dock .ad-in{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;justify-content:center;
+  pointer-events:auto;max-width:100%;padding:.45rem .55rem;border-radius:14px;
+  background:var(--bg);border:1px solid var(--glass-border);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#anno-dock button{width:34px;height:34px;border-radius:8px;border:1px solid transparent;
+  background:transparent;color:var(--text);cursor:pointer;font:inherit;font-size:.95rem;line-height:1;
+  display:flex;align-items:center;justify-content:center}
+#anno-dock button:hover{background:var(--hover)}
+#anno-dock button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
+#anno-dock button[aria-pressed="true"]:not(.anno-swatch){background:var(--accent-dim)}
+#anno-dock .anno-swatch{border:1px solid var(--glass-border)}
+#anno-dock .anno-swatch.anno-c-amber{background:var(--anno-amber)}
+#anno-dock .anno-swatch.anno-c-green{background:var(--anno-green)}
+#anno-dock .anno-swatch.anno-c-blue{background:var(--anno-blue)}
+#anno-dock .anno-swatch.anno-c-pink{background:var(--anno-pink)}
+#anno-dock button[data-tool="erase"],#anno-dock .ad-wipe{color:var(--bad)}
+#anno-dock .ad-sep{width:1px;height:22px;background:var(--hair);margin:0 .2rem}
+#anno-dock .ad-text{width:auto;padding:0 .7rem;font-size:.85rem;color:var(--text2)}
+#anno-dock .ad-hint{font-size:.8rem;color:var(--text3);padding:0 .5rem;white-space:nowrap}
+@media(max-width:640px){#anno-dock .ad-hint{display:none}}
+/* armed eraser: the marks it would take are the only thing it can point at */
+html.anno-erase mark.anno{cursor:crosshair}
+html.anno-erase mark.anno:hover{outline:2px solid var(--bad);outline-offset:1px}
 /* notes panel */
 #anno-panel{position:fixed;inset:0;z-index:140;display:none;background:rgba(0,0,0,.45)}
 #anno-panel.open{display:block}
