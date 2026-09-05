@@ -201,8 +201,15 @@ html.anno-erase mark.anno:hover{outline:2px solid var(--bad);outline-offset:1px}
   display:flex;flex-direction:column;background:var(--bg);border-left:1px solid var(--glass-border)}
 #anno-panel .ap-head{display:flex;align-items:center;justify-content:space-between;
   padding:1rem 1.1rem;border-bottom:1px solid var(--hair);font-weight:600}
+#anno-panel .ap-head .ap-title{flex:1 1 auto}
 #anno-panel .ap-close{width:44px;height:44px;border:0;background:transparent;color:var(--text2);
   font-size:1.4rem;line-height:1;cursor:pointer;border-radius:10px}
+#anno-panel .ap-export{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .6rem;
+  border-radius:8px;cursor:pointer;font:inherit;font-size:.82rem;font-weight:600;
+  border:1px solid var(--glass-border);background:transparent;color:var(--text2)}
+#anno-panel .ap-export:hover:not(:disabled){background:var(--hover);color:var(--text)}
+#anno-panel .ap-export:disabled{opacity:.4;cursor:default}
+#anno-panel .ap-export svg{width:.95rem;height:.95rem}
 #anno-panel .ap-filters{display:flex;gap:.4rem;flex-wrap:wrap;padding:.8rem 1.1rem;
   border-bottom:1px solid var(--hair)}
 #anno-panel .ap-f{min-width:34px;height:30px;padding:0 .6rem;border-radius:999px;cursor:pointer;

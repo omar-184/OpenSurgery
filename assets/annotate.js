@@ -399,7 +399,11 @@
     panel.id = "anno-panel";
     panel.innerHTML =
       '<div class="ap-panel" role="dialog" aria-modal="true" aria-label="Notes and highlights">' +
-        '<div class="ap-head"><span>Notes &amp; highlights</span>' +
+        '<div class="ap-head"><span class="ap-title">Notes &amp; highlights</span>' +
+        '<button type="button" class="ap-export" aria-label="Export as a Markdown file">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>Export</button>' +
         '<button type="button" class="ap-close" aria-label="Close">×</button></div>' +
         '<div class="ap-filters"></div><div class="ap-list"></div></div>';
     document.body.appendChild(panel);
@@ -418,6 +422,7 @@
       f.querySelectorAll(".ap-f").forEach(function(x){ x.classList.toggle("on", x === b); });
       renderPanel();
     });
+    panel.querySelector(".ap-export").addEventListener("click", exportMarkdown);
     panel.querySelector(".ap-close").addEventListener("click", closePanel);
     panel.addEventListener("click", function(e){ if(e.target === panel) closePanel(); });
     panelList.addEventListener("click", function(e){
@@ -435,13 +440,74 @@
   }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
-  function renderPanel(){
-    if(!panelList) return;
-    var rows = annos.filter(function(a){
+  function visibleRows(){
+    return annos.filter(function(a){
       if(!filterKey) return true;
       if(filterKey === "note") return !!a.note || a.kind === "note";
       return a.color === filterKey;
     });
+  }
+
+  // ---------- export ----------
+  // Reading order, not the order they happened to be made in: the painted
+  // marks are already in document order, and anything whose passage no longer
+  // matches has no mark, so it sorts to the end.
+  function inDocOrder(rows){
+    var pos = {}, marks = article.querySelectorAll("mark.anno[data-anno-id]");
+    for(var i = 0; i < marks.length; i++){
+      var id = marks[i].getAttribute("data-anno-id");
+      if(!(id in pos)) pos[id] = i;
+    }
+    return rows.slice().sort(function(a, b){
+      return ((a.id in pos) ? pos[a.id] : Infinity) - ((b.id in pos) ? pos[b.id] : Infinity);
+    });
+  }
+  function sectionTitle(id){
+    var h = id ? document.getElementById(id) : null;
+    return h ? h.textContent.trim() : null;
+  }
+  function flat(s){ return String(s).replace(/\s+/g, " ").trim(); }
+  function download(name, text){
+    var url = URL.createObjectURL(new Blob([text], {type:"text/markdown;charset=utf-8"}));
+    var a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+  function exportMarkdown(){
+    var rows = inDocOrder(visibleRows());
+    if(!rows.length) return;
+    var h1 = article.querySelector("h1");
+    var title = h1 ? flat(h1.textContent) : document.title.replace(/\s*\|\s*OpenSurgery\s*$/, "");
+    var out = ["# " + title, "",
+      "Notes and highlights from [OpenSurgery](" + location.href.split("#")[0] + ")  ",
+      rows.length + (rows.length === 1 ? " mark" : " marks") +
+        (filterKey ? " (filter: " + (filterKey === "note" ? "notes" : filterKey) + ")" : "") +
+        " · exported " + new Date().toISOString().slice(0, 10)];
+    var lastSection = false;   // never equal to a title or to null
+    rows.forEach(function(a){
+      var sec = sectionTitle(a.section_id);
+      if(sec !== lastSection){
+        out.push("", "## " + (sec || "Elsewhere on the page"));
+        lastSection = sec;
+      }
+      out.push("", "> " + flat(a.exact));
+      // for a note the "**Note:**" line below already says what kind it is
+      if(!(a.kind === "note" && a.note && !a._lost)){
+        out.push("", "*" + KIND_LABEL[a.kind] + (a.color ? " (" + a.color + ")" : "") +
+          (a._lost ? " · passage changed" : "") + "*");
+      }
+      if(a.note) out.push("", "**Note:** " + flat(a.note));
+    });
+    out.push("");
+    download(SLUG + "-notes.md", out.join("\n"));
+  }
+
+  function renderPanel(){
+    if(!panelList) return;
+    var rows = visibleRows();
+    var ex = panel.querySelector(".ap-export");
+    if(ex) ex.disabled = !rows.length;
     var badges = document.querySelectorAll(".rail-action .anno-count");
     for(var b = 0; b < badges.length; b++){
       badges[b].textContent = annos.length ? annos.length : "";
