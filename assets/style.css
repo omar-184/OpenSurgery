@@ -248,27 +248,14 @@ a.ft small{display:inline;margin-left:.5rem;color:var(--text3)}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .ft-snip mark{background:var(--accent-dim);color:var(--text);padding:0 .12em;border-radius:2px}
 
-/* Library: every topic, grouped by specialty, filtered client-side. */
-.all-topics{margin-top:4rem;border-top:1px solid var(--hair);padding-top:2.2rem}
-.all-head{display:flex;flex-wrap:wrap;gap:1rem;align-items:baseline;justify-content:space-between}
-.all-head h2{margin:0;font-size:1.35rem;letter-spacing:-.01em}
-.all-filter{display:flex;align-items:center;gap:.7rem}
-.all-filter input{width:min(300px,60vw);padding:.55rem .9rem;border-radius:999px;
-  border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font:inherit;font-size:.92rem}
-.all-filter input:focus{border-color:var(--accent);outline:none}
-#topic-count{color:var(--text3);font-size:.85rem;white-space:nowrap;font-variant-numeric:tabular-nums}
-.all-group{margin-top:2rem}
-.all-group h3{display:flex;align-items:center;gap:.6rem;margin:0 0 .7rem;
-  font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);font-weight:600}
-.all-group h3 .glyph{font-size:1rem;color:var(--accent)}
-.all-group h3 small{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none}
-.all-group ul{list-style:none;margin:0;padding:0;
-  display:grid;gap:.15rem 1.6rem;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
-.all-group li::before{content:none}
-.all-group li{margin:0;padding:0}
-.all-group li a{display:block;padding:.42rem 0;color:var(--text2);border-bottom:1px solid transparent}
-.all-group li a:hover{color:var(--accent);text-decoration:none;border-bottom-color:var(--hair)}
 .no-results{color:var(--text3);margin-top:1.5rem}
+/* Library: search box above the category grid dims any card whose specialty
+   has no matching topic, while the shared hero-search dropdown (see
+   .hero-search / .hero-search-results) lists direct topic matches. */
+.library-search{margin:1.6rem 0 2.2rem}
+.grid .card.dim{opacity:.3;pointer-events:none}
+@media(prefers-reduced-motion:no-preference){.grid .card{transition:opacity .15s}}
+.library-sub{max-width:none}
 
 .about .lede{font-size:1.12rem;line-height:1.65;color:var(--text2)}
 .about h2{margin-top:2.4rem}
