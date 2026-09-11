@@ -676,6 +676,7 @@
               '<span class="nm">' + esc(label) + "</span>" +
               (d.kind === "question-bank" ? '<span class="k">Q</span>' : "") +
               (d.new_file ? '<span class="k">new</span>' : "") +
+              (d.pending ? '<span class="k pend" title="a proposal is waiting">' + (isAdmin() ? "review" : "proposed") + "</span>" : "") +
               (d.edited ? '<span class="dot" title="edited on the site"></span>' : "") +
               "</button>";
     });
@@ -694,6 +695,7 @@
     $("save-btn").disabled = !dirty();
     $("dirty").textContent = dirty() ? "Unsaved changes" : "";
     renderChecks();
+    if(cur && cur.proposal) renderDiff();
   }
 
   function openDoc(path){
@@ -701,27 +703,10 @@
     OS.req("/api/admin/docs/" + path).then(function(r){
       if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not open that document."); });
       return r.json().then(function(d){
-        cur = d; curBody = d.body; blocks = null; vblocks = null; mode = "md";
-        $("editor").value = d.body;
-        $("doc-title").textContent = d.kind === "question-bank"
-          ? catName(d.category_slug) + " question bank" : d.title;
-        $("doc-path").textContent = d.path;
-        $("revert-btn").disabled = !d.edited;
-        $("mode-q").style.display = d.kind === "question-bank" ? "" : "none";
-        $("mode-visual").style.display = d.kind === "question-bank" ? "none" : "";
-        $("editor-panes").style.display = "";
-        $("admin-empty").style.display = "none";
-        $("meta").textContent = d.edited
-          ? "Edited on the site" + (d.updated_by ? " by " + d.updated_by : "") +
-            (d.updated_at ? " · " + d.updated_at.slice(0, 16).replace("T", " ") : "") +
-            " · " + d.revisions + " revision(s)"
-          : "Matches the repo";
-        /* Articles open in the visual editor, question banks in the
-           question editor -- both round-trip untouched content verbatim, so
-           opening a file in one cannot rewrite it. */
-        setMode(d.kind === "question-bank" ? "q" : "visual");
-        renderList();
-        markDirty();
+        /* An editor with an open proposal on this page carries on from it;
+           an admin always opens the live text and reviews from the
+           Proposals tab. */
+        showDoc(d, (!isAdmin() && d.my_proposal) ? d.my_proposal : null);
       });
     });
   }
@@ -845,8 +830,10 @@
   /* ---------------- save / revert / history ---------------- */
   function save(){
     if(!cur || !dirty()) return;
+    if(cur.proposal && isAdmin()) return;      // reviewing: approve or reject instead
     var text = editorText();
     $("save-btn").disabled = true;
+    if(!isAdmin()){ submitProposal(text); return; }
     OS.req("/api/admin/docs/" + cur.path, {
       method:"PUT", body: JSON.stringify({body:text, note:$("note").value || null})
     }).then(function(r){
@@ -858,7 +845,7 @@
       var d = byPath[cur.path];
       if(d){ d.edited = true; }
       cur.edited = true;
-      $("revert-btn").disabled = false;
+      applyReviewUi();
       $("meta").textContent = "Edited on the site · saved just now";
       OS.showToast("Saved. Run `python tools/admin_sync.py pull` locally to bring it into the repo.");
       renderList(); markDirty();
@@ -886,8 +873,7 @@
           setMode(cur.kind === "question-bank" ? "q" : "visual");
           cur.edited = false;
           if(byPath[cur.path]) byPath[cur.path].edited = false;
-          $("revert-btn").disabled = true;
-          $("meta").textContent = "Matches the repo";
+          applyReviewUi();
           OS.showToast("Reverted to the repo version.");
         }
         renderList(); markDirty();
@@ -942,6 +928,18 @@
       "Complications","Prognosis"].map(function(s){
         return "## " + s + "\n*Not covered in source textbooks.*\n";
       }).join("\n");
+    if(!isAdmin()){
+      OS.req("/api/admin/proposals/for/" + path, {
+        method:"PUT", body: JSON.stringify({body:skeleton, title:title, kind:"topic", note:"new page"})
+      }).then(function(r){
+        if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not propose that page."); });
+        return r.json().then(function(res){
+          OS.showToast("Proposed. Fill it in and update the proposal; an admin approves it.");
+          openProposal(res.proposal.id);
+        });
+      });
+      return;
+    }
     OS.req("/api/admin/docs/" + path, {
       method:"PUT", body: JSON.stringify({body:skeleton, title:title, kind:"topic", note:"created in the editor"})
     }).then(function(r){
@@ -950,34 +948,305 @@
     });
   }
 
+  /* ---------------- proposals & review ----------------
+     An editor's Save does not touch the live text: it becomes a proposal an
+     admin reads as a diff and approves or rejects. Approval is what writes
+     the document, exactly as an admin's own Save would. */
+  var me = null;
+  function isAdmin(){ return !!(me && me.role === "admin"); }
+
+  function when(iso){ return iso ? iso.slice(0, 16).replace("T", " ") : ""; }
+
+  /* --- a line diff for the review panel --- */
+  function lcsDiff(A, B){
+    var n = A.length, m = B.length;
+    if(n * m > 6000000){
+      // Far beyond anything in content/; a crude fallback rather than a hang.
+      var out0 = [];
+      for(var k = 0; k < Math.max(n, m); k++){
+        if(A[k] === B[k]) out0.push([" ", A[k]]);
+        else { if(k < n) out0.push(["-", A[k]]); if(k < m) out0.push(["+", B[k]]); }
+      }
+      return out0;
+    }
+    var L = [];
+    for(var i = 0; i <= n; i++) L.push(new Int32Array(m + 1));
+    for(i = n - 1; i >= 0; i--)
+      for(var j = m - 1; j >= 0; j--)
+        L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    var out = []; i = 0; j = 0;
+    while(i < n && j < m){
+      if(A[i] === B[j]){ out.push([" ", A[i]]); i++; j++; }
+      else if(L[i + 1][j] >= L[i][j + 1]){ out.push(["-", A[i]]); i++; }
+      else { out.push(["+", B[j]]); j++; }
+    }
+    while(i < n) out.push(["-", A[i++]]);
+    while(j < m) out.push(["+", B[j++]]);
+    return out;
+  }
+
+  /* Word-level marks inside a changed line, so a one-word edit in a
+     200-word paragraph is visible at a glance. */
+  function wordMarks(oldLine, newLine){
+    var a = oldLine.split(/(\s+)/), b = newLine.split(/(\s+)/);
+    var d = lcsDiff(a, b), del = "", ins = "";
+    d.forEach(function(x){
+      var t = escHtml(x[1]);
+      if(x[0] === " "){ del += t; ins += t; }
+      else if(x[0] === "-") del += "<del>" + t + "</del>";
+      else ins += "<ins>" + t + "</ins>";
+    });
+    return [del, ins];
+  }
+
+  function renderDiff(){
+    var box = $("diffpanel");
+    if(!cur || !cur.proposal){ box.style.display = "none"; return; }
+    box.style.display = "";
+    var d = lcsDiff((cur.liveBody || "").split("\n"), editorText().split("\n"));
+    var html = "", changed = 0, skipped = 0;
+    function flushSkip(){ if(skipped){ html += '<div class="dl ctx">… ' + skipped + " unchanged line(s)</div>"; skipped = 0; } }
+    for(var i = 0; i < d.length; i++){
+      var op = d[i][0], line = d[i][1];
+      if(op === " "){
+        var near = (i > 0 && d[i - 1][0] !== " ") || (i + 1 < d.length && d[i + 1][0] !== " ");
+        if(near){ flushSkip(); html += '<div class="dl same">' + escHtml(line) + "</div>"; }
+        else skipped++;
+        continue;
+      }
+      flushSkip(); changed++;
+      if(op === "-" && i + 1 < d.length && d[i + 1][0] === "+"){
+        var wm = wordMarks(line, d[i + 1][1]);
+        html += '<div class="dl del">' + wm[0] + '</div><div class="dl ins">' + wm[1] + "</div>";
+        i++;                      // one edited line, not a removal plus an addition
+      } else {
+        html += '<div class="dl ' + (op === "-" ? "del" : "ins") + '">' + escHtml(line) + "</div>";
+      }
+    }
+    flushSkip();
+    var head = cur.new_file ? "New page — everything below is added."
+             : changed ? changed + " changed line(s) against the live text"
+             : "No difference from the live text.";
+    if(cur.proposal.stale) head += ' · <span class="stale">⚠ the page changed after this was written; the diff is against today’s text</span>';
+    box.innerHTML = '<div class="t">Changes</div><div class="dh">' + head + "</div>" + html;
+  }
+
+  /* --- buttons and status line for the current document --- */
+  function applyReviewUi(){
+    var p = cur && cur.proposal, admin = isAdmin();
+    $("save-btn").style.display = (p && admin) ? "none" : "";
+    $("save-btn").textContent = admin ? "Save" : (p ? "Update proposal" : "Submit for approval");
+    $("approve-btn").style.display = (p && admin) ? "" : "none";
+    $("reject-btn").style.display = (p && admin) ? "" : "none";
+    $("withdraw-btn").style.display = (p && !admin) ? "" : "none";
+    $("revert-btn").style.display = (admin && !p) ? "" : "none";
+    $("revert-btn").disabled = !(cur && cur.edited);
+    $("history-btn").style.display = cur && cur.new_file ? "none" : "";
+    var meta;
+    if(p && admin){
+      meta = "Proposal by " + (p.author || "?") + " · submitted " + when(p.updated_at || p.created_at) +
+             (p.note ? " · “" + p.note + "”" : "") +
+             " · edit the text if you like, then approve or reject";
+    } else if(p){
+      meta = "Your proposal, waiting for an admin · submitted " + when(p.updated_at || p.created_at) +
+             (p.note ? " · “" + p.note + "”" : "");
+    } else if(cur && cur.edited){
+      meta = "Edited on the site" + (cur.updated_by ? " by " + cur.updated_by : "") +
+             (cur.updated_at ? " · " + when(cur.updated_at) : "") +
+             " · " + (cur.revisions || 0) + " revision(s)";
+    } else {
+      meta = "Matches the repo";
+    }
+    $("meta").textContent = meta;
+    renderDiff();
+  }
+
+  /* Everything openDoc and openProposal share once the text is in hand. */
+  function showDoc(d, prop){
+    cur = d; cur.proposal = prop || null; cur.liveBody = d.body;
+    curBody = prop ? prop.body : d.body;
+    blocks = null; vblocks = null; mode = "md";
+    $("editor").value = curBody;
+    $("doc-title").textContent = d.kind === "question-bank"
+      ? catName(d.category_slug) + " question bank" : d.title;
+    $("doc-path").textContent = d.path;
+    $("mode-q").style.display = d.kind === "question-bank" ? "" : "none";
+    $("mode-visual").style.display = d.kind === "question-bank" ? "none" : "";
+    $("editor-panes").style.display = "";
+    $("admin-empty").style.display = "none";
+    /* Articles open in the visual editor, question banks in the question
+       editor -- both round-trip untouched content verbatim, so opening a
+       file in one cannot rewrite it. */
+    setMode(d.kind === "question-bank" ? "q" : "visual");
+    applyReviewUi();
+    renderList();
+    markDirty();
+  }
+
+  function openProposal(id){
+    if(dirty() && !confirm("You have unsaved changes. Discard them?")) return;
+    OS.req("/api/admin/proposals/" + id).then(function(r){
+      if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not open that proposal."); });
+      return r.json().then(function(p){
+        setTab("all");
+        var d = byPath[p.path] || {path:p.path, kind:p.kind, category_slug:p.category_slug,
+                                    title:p.title, edited:false, revisions:0, new_file:true};
+        d = Object.assign({}, d, {body:p.current_body, new_file: p.new_file || d.new_file});
+        showDoc(d, p);
+      });
+    });
+  }
+
+  function approve(){
+    var p = cur && cur.proposal;
+    if(!p) return;
+    var text = editorText();
+    if(!confirm("Approve and apply this proposal? It becomes the live text of " + cur.path +
+                (text !== p.body ? " (with your edits)." : "."))) return;
+    OS.req("/api/admin/proposals/" + p.id + "/approve", {
+      method:"POST", body: JSON.stringify({body:text, note:$("note").value || null})
+    }).then(function(r){
+      if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not approve."); });
+      $("note").value = "";
+      OS.showToast("Approved. It reaches the site after `admin_sync.py pull` and a rebuild.");
+      return loadDocs().then(function(){ openDoc(cur.path); });
+    });
+  }
+
+  function reject(){
+    var p = cur && cur.proposal;
+    if(!p) return;
+    var note = prompt("Reject this proposal? A short reason helps the editor:", $("note").value || "");
+    if(note === null) return;
+    OS.req("/api/admin/proposals/" + p.id + "/reject", {
+      method:"POST", body: JSON.stringify({note: note || null})
+    }).then(function(r){
+      if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not reject."); });
+      $("note").value = "";
+      OS.showToast("Rejected.");
+      return loadDocs().then(function(){ if(!cur.new_file) openDoc(cur.path); else setTab("proposals"); });
+    });
+  }
+
+  function withdraw(){
+    var p = cur && cur.proposal;
+    if(!p) return;
+    if(!confirm("Withdraw your proposal? Your changes to this page will be discarded.")) return;
+    OS.req("/api/admin/proposals/" + p.id, {method:"DELETE"}).then(function(r){
+      if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not withdraw."); });
+      OS.showToast("Withdrawn.");
+      curBody = editorText();   // so the unsaved-changes guard does not fire on the reload
+      return loadDocs().then(function(){ if(!cur.new_file) openDoc(cur.path); else setTab("proposals"); });
+    });
+  }
+
+  function submitProposal(text){
+    OS.req("/api/admin/proposals/for/" + cur.path, {
+      method:"PUT", body: JSON.stringify({body:text, note:$("note").value || null,
+                                          kind:cur.kind, title:cur.title})
+    }).then(function(r){
+      if(!r.ok) return r.json().then(function(j){
+        OS.showToast(j.detail || "Could not submit."); $("save-btn").disabled = false;
+      });
+      return r.json().then(function(res){
+        if(!res.saved){ OS.showToast("Nothing to submit — the text matches the live page."); markDirty(); return; }
+        curBody = text;
+        cur.proposal = res.proposal; cur.proposal.body = text;
+        $("note").value = "";
+        if(byPath[cur.path]) byPath[cur.path].pending = 1;
+        OS.showToast("Submitted. An admin will review it before it goes on the site.");
+        loadDocs();
+        applyReviewUi(); markDirty();
+      });
+    });
+  }
+
+  /* --- the proposals tab --- */
+  function showProposals(){
+    var admin = isAdmin();
+    OS.req("/api/admin/proposals?status=" + (admin ? "pending" : "all"))
+      .then(function(r){ return r.json(); }).then(function(res){
+        var rows = res.proposals, panel = $("proposals-panel");
+        if(!rows.length){
+          panel.innerHTML = '<div class="admin-empty">' + (admin
+            ? "No proposals waiting for review."
+            : "You have not proposed any changes yet. Open a page, edit it, and press <b>Submit for approval</b>.") +
+            "</div>";
+          return;
+        }
+        var html = '<div class="admin-users"><table><thead><tr><th>Page</th>' +
+          (admin ? "<th>By</th>" : "<th>Status</th>") + "<th>When</th><th>Note</th><th></th></tr></thead><tbody>";
+        rows.forEach(function(p){
+          var open = p.status === "pending";
+          html += "<tr" + (open ? ' class="click" data-open="' + p.id + '"' : "") + '><td class="nm">' +
+            esc(p.title) + '<span class="path">' + esc(p.path) + "</span>" +
+            (p.new_file ? ' <span class="k">new page</span>' : "") +
+            (p.stale ? ' <span class="stale" title="The page changed after this was written">⚠ stale</span>' : "") +
+            "</td><td>" + (admin ? esc(p.author || "?") : '<span class="role-pill ' + p.status + '">' + p.status + "</span>") +
+            "</td><td>" + esc(when(p.updated_at || p.created_at)) + "</td><td>" +
+            esc(p.note || "") +
+            (p.status === "rejected" && p.review_note ? '<div class="rev-note">Reason: ' + esc(p.review_note) + "</div>" : "") +
+            (p.status !== "pending" && p.reviewer ? '<div class="rev-note">' + p.status + " by " + esc(p.reviewer) + "</div>" : "") +
+            "</td><td>" +
+            (open ? '<button type="button" class="abtn" data-open="' + p.id + '">' + (admin ? "Review" : "Continue") + "</button>"
+                  : '<button type="button" class="abtn" data-dismiss="' + p.id + '" title="Remove from this list">Clear</button>') +
+            "</td></tr>";
+        });
+        panel.innerHTML = html + "</tbody></table></div>";
+      });
+  }
+
+  function wireProposals(){
+    $("proposals-panel").addEventListener("click", function(e){
+      var b = e.target.closest("[data-open]");
+      if(b){ openProposal(+b.getAttribute("data-open")); return; }
+      var d = e.target.closest("button[data-dismiss]");
+      if(d){
+        OS.req("/api/admin/proposals/" + d.getAttribute("data-dismiss"), {method:"DELETE"})
+          .then(function(){ showProposals(); });
+      }
+    });
+    $("approve-btn").addEventListener("click", approve);
+    $("reject-btn").addEventListener("click", reject);
+    $("withdraw-btn").addEventListener("click", withdraw);
+  }
+
   /* ---------------- users ---------------- */
   function showUsers(){
     OS.req("/api/admin/users").then(function(r){ return r.json(); }).then(function(rows){
       var html = '<div class="admin-users"><table><thead><tr><th>Name</th><th>Email</th>' +
         "<th>Sign-in</th><th>Role</th><th></th></tr></thead><tbody>";
       rows.forEach(function(u){
+        var sel = '<select class="role-select" data-user="' + u.id + '" aria-label="Role for ' + esc(u.display_name) + '">' +
+          ["user", "editor", "admin"].map(function(r){
+            return '<option value="' + r + '"' + (u.role === r ? " selected" : "") + ">" +
+                   {user:"Reader", editor:"Editor", admin:"Admin"}[r] + "</option>";
+          }).join("") + "</select>";
         html += "<tr><td class=\"nm\">" + esc(u.display_name) + "</td><td>" + esc(u.email || "—") +
           "</td><td>" + esc(u.auth_provider) + '</td><td><span class="role-pill ' + u.role + '">' +
-          u.role + "</span></td><td>" +
-          '<button type="button" class="abtn' + (u.role === "admin" ? " danger" : "") +
-          '" data-user="' + u.id + '" data-role="' + (u.role === "admin" ? "user" : "admin") + '">' +
-          (u.role === "admin" ? "Remove admin" : "Make admin") + "</button></td></tr>";
+          u.role + "</span></td><td>" + sel + "</td></tr>";
       });
-      $("users-panel").innerHTML = html + "</tbody></table></div>";
+      $("users-panel").innerHTML =
+        '<div class="admin-note" style="margin-bottom:1rem"><b>Reader</b> saves progress only. ' +
+        "<b>Editor</b> can change any article or question, but every save becomes a proposal " +
+        "that waits for an admin. <b>Admin</b> edits directly, reviews proposals and manages accounts.</div>" +
+        html + "</tbody></table></div>";
     });
   }
 
   function wireUsers(){
-    $("users-panel").addEventListener("click", function(e){
-      var b = e.target.closest("button[data-user]");
-      if(!b) return;
-      var role = b.getAttribute("data-role");
-      if(!confirm(role === "admin" ? "Give this account full editing access to the site's content?"
-                                    : "Remove this account's editing access?")) return;
-      OS.req("/api/admin/users/" + b.getAttribute("data-user"), {
+    $("users-panel").addEventListener("change", function(e){
+      var sel = e.target.closest("select[data-user]");
+      if(!sel) return;
+      var role = sel.value;
+      var ask = {admin: "Give this account full admin access — direct edits, reviewing proposals and managing accounts?",
+                 editor: "Make this account an editor? Their saves become proposals you approve.",
+                 user: "Remove this account's editing access?"}[role];
+      if(!confirm(ask)){ showUsers(); return; }
+      OS.req("/api/admin/users/" + sel.getAttribute("data-user"), {
         method:"PATCH", body: JSON.stringify({role:role})
       }).then(function(r){
-        if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not change that."); });
+        if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not change that."); showUsers(); });
         OS.showToast("Updated."); showUsers();
       });
     });
@@ -991,22 +1260,26 @@
       $("edited-count").textContent = res.edited_count
         ? res.edited_count + " file(s) edited on the site and waiting to be pulled"
         : "Everything here matches the repo.";
+      $("tab-proposals").textContent = (isAdmin() ? "Proposals to review" : "My proposals") +
+        (res.pending_count ? " (" + res.pending_count + ")" : "");
+      $("tab-proposals").classList.toggle("attention", !!(isAdmin() && res.pending_count));
       renderList();
     });
   }
 
   function setTab(t){
     tab = t;
-    ["all","articles","questions","edited","users"].forEach(function(k){
+    ["all","articles","questions","edited","users","proposals"].forEach(function(k){
       var b = $("tab-" + k);
       if(b) b.classList.toggle("on", k === t);
     });
-    var users = t === "users";
+    var users = t === "users", props = t === "proposals", panel = users || props;
     $("users-panel").style.display = users ? "" : "none";
-    $("editor-panes").style.display = users || !cur ? "none" : "";
-    $("admin-empty").style.display = users || cur ? "none" : "";
-    $("doc-browse").style.display = users ? "none" : "";
-    if(users) showUsers(); else renderList();
+    $("proposals-panel").style.display = props ? "" : "none";
+    $("editor-panes").style.display = panel || !cur ? "none" : "";
+    $("admin-empty").style.display = panel || cur ? "none" : "";
+    $("doc-browse").style.display = panel ? "none" : "";
+    if(users) showUsers(); else if(props) showProposals(); else renderList();
   }
 
   ready(function(){
@@ -1016,20 +1289,25 @@
     }
     OS.user.then(function(user){
       if(!user){ location.replace("login.html"); return; }
-      if(user.role !== "admin"){
-        $("admin-gate").innerHTML = '<div class="admin-note">This page is for site administrators. ' +
+      if(user.role !== "admin" && user.role !== "editor"){
+        $("admin-gate").innerHTML = '<div class="admin-note">This page is for the site\u2019s editors and administrators. ' +
           "You are signed in as " + esc(user.display_name) + ".</div>";
         return;
       }
+      me = user;
       $("admin-gate").style.display = "none";
       $("admin-shell").style.display = "";
+      if(!isAdmin()){
+        $("tab-users").style.display = "none";
+        $("editor-banner").style.display = "";
+      }
 
       $("filter").addEventListener("input", renderList);
       $("doc-list").addEventListener("click", function(e){
         var b = e.target.closest("button.doc");
         if(b) openDoc(b.getAttribute("data-path"));
       });
-      ["all","articles","questions","edited","users"].forEach(function(k){
+      ["all","articles","questions","edited","users","proposals"].forEach(function(k){
         var b = $("tab-" + k);
         if(b) b.addEventListener("click", function(){ setTab(k); });
       });
@@ -1045,6 +1323,7 @@
       wireVisual();
       wireFormatBar();
       wireUsers();
+      wireProposals();
 
       document.addEventListener("keydown", function(e){
         if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s"){ e.preventDefault(); save(); }

@@ -754,6 +754,33 @@ article h2[id],article h3[id]{scroll-margin-top:4.5rem}
 .role-pill{display:inline-block;padding:.12rem .55rem;border-radius:999px;font-size:.74rem;font-weight:700}
 .role-pill.admin{background:var(--accent-dim);color:var(--accent)}
 .role-pill.user{background:var(--fill);color:var(--text3)}
+.role-pill.editor{background:rgba(255,214,10,.16);color:#e0a800}
+:root[data-theme="light"] .role-pill.editor{color:#8a6100}
+.role-pill.pending{background:rgba(255,214,10,.16);color:#e0a800}
+.role-pill.approved{background:var(--good-dim);color:var(--good)}
+.role-pill.rejected{background:var(--bad-dim);color:var(--bad)}
+.role-select{padding:.3rem .5rem;border-radius:8px;font:inherit;font-size:.84rem;
+  background:var(--fill);border:1px solid var(--glass-border);color:var(--text)}
+.admin-users tr.click{cursor:pointer}
+.admin-users tr.click:hover td{background:var(--hover)}
+.admin-users td .path{display:block;font:.72rem ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color:var(--text3);font-weight:400}
+.admin-users .rev-note{font-size:.78rem;color:var(--text3);margin-top:.2rem}
+.doc-list button.doc .k.pend{color:#e0a800}
+.abtn.attention{border-color:#e0a800;color:#e0a800}
+.stale{color:#e0a800;font-size:.8rem}
+/* review diff */
+.admin-diff{border:1px solid var(--hair);border-radius:14px;background:var(--fill);padding:.85rem 1rem;
+  font-size:.82rem;max-height:46vh;overflow:auto}
+.admin-diff .t{font-weight:650;color:var(--text2);font-size:.75rem;letter-spacing:.05em;text-transform:uppercase}
+.admin-diff .dh{margin:.3rem 0 .6rem;color:var(--text2)}
+.admin-diff .dl{padding:.15rem .5rem;border-radius:5px;white-space:pre-wrap;word-break:break-word;
+  font:.8rem/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--text3)}
+.admin-diff .dl.ctx{color:var(--text3);font-style:italic;padding:.3rem .5rem}
+.admin-diff .dl.del{background:var(--bad-dim);color:var(--text2)}
+.admin-diff .dl.ins{background:var(--good-dim);color:var(--text)}
+.admin-diff del{background:rgba(255,69,58,.35);text-decoration:line-through;color:var(--text)}
+.admin-diff ins{background:rgba(48,209,88,.35);text-decoration:none;color:var(--text)}
 /* ---------- visual (block) article editor ---------- */
 .vbar{position:sticky;top:56px;z-index:20;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;
   padding:.5rem .7rem;border-radius:12px;background:var(--bg);border:1px solid var(--hair)}

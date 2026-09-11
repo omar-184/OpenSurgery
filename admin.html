@@ -5,7 +5,7 @@
 <script>(function(){try{var s=localStorage.getItem("os-theme");if(s==="light"||(!s&&window.matchMedia("(prefers-color-scheme: light)").matches))document.documentElement.setAttribute("data-theme","light");}catch(e){}})();</script><script>(function(){try{if(localStorage.getItem("os-uk-guidelines")==="0")document.documentElement.classList.add("hide-uk");}catch(e){}})();</script>
 <link rel="icon" type="image/svg+xml" href="assets/logo/icon-dark.svg" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/svg+xml" href="assets/logo/icon-light.svg" media="(prefers-color-scheme: light)">
-<link rel="stylesheet" href="assets/style.css?v=59016332"></head>
+<link rel="stylesheet" href="assets/style.css?v=5d6a0f76"></head>
 <body data-root="">
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="toolbar"><a class="wordmark" href="index.html">
@@ -30,6 +30,7 @@
       <div class="doc-list" id="doc-list"></div>
       <button type="button" class="abtn" id="new-btn">New topic page</button>
     </div>
+    <button type="button" class="abtn" id="tab-proposals">Proposals</button>
     <button type="button" class="abtn" id="tab-users">Accounts &amp; access</button>
   </aside>
 
@@ -39,7 +40,13 @@
       <code>python tools/admin_sync.py pull</code> in the repo, then <code>python build.py</code>,
       and push both repos.</div>
 
+    <div class="admin-note" id="editor-banner" style="display:none;border-color:rgba(58,163,158,.4)">
+      <b>You are an editor.</b> Change anything you like; pressing <b>Submit for approval</b> sends
+      it to an admin, who reads the difference and approves it before it goes on the site.
+      Your open proposals are under <b>My proposals</b>.</div>
+
     <div id="users-panel" style="display:none"></div>
+    <div id="proposals-panel" style="display:none"></div>
 
     <div class="admin-empty" id="admin-empty">Pick a page on the left to start editing.</div>
 
@@ -51,8 +58,12 @@
         <button type="button" class="abtn" id="mode-q">Questions</button>
         <button type="button" class="abtn" id="history-btn">History</button>
         <button type="button" class="abtn danger" id="revert-btn" disabled>Revert</button>
+        <button type="button" class="abtn danger" id="withdraw-btn" style="display:none">Withdraw</button>
+        <button type="button" class="abtn danger" id="reject-btn" style="display:none">Reject</button>
+        <button type="button" class="abtn primary" id="approve-btn" style="display:none">Approve &amp; apply</button>
         <button type="button" class="abtn primary" id="save-btn" disabled>Save</button>
       </div>
+      <div class="admin-diff" id="diffpanel" style="display:none"></div>
       <div class="vbar" id="vbar" style="display:none">
         <button type="button" id="fmt-bold" title="Bold (select text first)">B</button>
         <button type="button" id="fmt-italic" title="Italic (select text first)">I</button>
@@ -74,7 +85,7 @@
 </div>
 <footer><div class="wrap"><p class="foot-note"><strong>This is a revision reference, not clinical advice.</strong> Everything on the site comes from the books and guidelines cited next to it. Guidelines change, and a page only reflects what its sources said on the day it was written. Check the current guideline, your local protocol and your seniors before you act on anything you read here.</p><p class="foot-meta">OpenSurgery · <a href="about.html">About and sources</a> · <a href="https://github.com/omar-184/OpenSurgery/issues" target="_blank" rel="noopener">Report an error</a> · Built <time datetime="2026-09-11">11 September 2026</time></p></div></footer>
 <script>window.OS_API_BASE="https://opensurgery-api.onrender.com";window.OS_GOOGLE_CLIENT_ID="91864551995-toid020d62ov3fn1qi3m0qqqhbdq2ul8.apps.googleusercontent.com";</script>
-<script src="assets/auth.js?v=59016332"></script>
-<script src="assets/progress.js?v=59016332"></script>
-<script src="assets/app.js?v=59016332"></script>
-<script>window.OS_CATEGORY_NAMES={"upper-gi": "Upper Gastrointestinal", "hpb": "Hepatobiliary, Pancreatic & Spleen", "colorectal": "Small Bowel & Colorectal", "breast": "Breast", "endocrine": "Endocrine, Head & Neck", "hernia": "Hernia, Abdominal Wall & Peritoneum", "trauma-critical-care": "Trauma & Critical Care", "surgical-oncology": "Surgical Oncology", "vascular": "Vascular", "mis-endoscopic": "Minimally Invasive & Endoscopic", "skin-soft-tissue": "Skin & Soft Tissue", "pediatric": "Pediatric Surgery", "perioperative": "Perioperative & Foundational", "transplant": "Transplantation", "thoracic": "Thoracic"};</script><script src="assets/admin.js?v=59016332"></script></body></html>
+<script src="assets/auth.js?v=5d6a0f76"></script>
+<script src="assets/progress.js?v=5d6a0f76"></script>
+<script src="assets/app.js?v=5d6a0f76"></script>
+<script>window.OS_CATEGORY_NAMES={"upper-gi": "Upper Gastrointestinal", "hpb": "Hepatobiliary, Pancreatic & Spleen", "colorectal": "Small Bowel & Colorectal", "breast": "Breast", "endocrine": "Endocrine, Head & Neck", "hernia": "Hernia, Abdominal Wall & Peritoneum", "trauma-critical-care": "Trauma & Critical Care", "surgical-oncology": "Surgical Oncology", "vascular": "Vascular", "mis-endoscopic": "Minimally Invasive & Endoscopic", "skin-soft-tissue": "Skin & Soft Tissue", "pediatric": "Pediatric Surgery", "perioperative": "Perioperative & Foundational", "transplant": "Transplantation", "thoracic": "Thoracic"};</script><script src="assets/admin.js?v=5d6a0f76"></script></body></html>
