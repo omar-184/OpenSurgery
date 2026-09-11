@@ -3,5 +3,6 @@ Allow: /
 Disallow: /dashboard.html
 Disallow: /settings.html
 Disallow: /login.html
+Disallow: /admin.html
 
 Sitemap: https://omar-184.github.io/OpenSurgery/sitemap.xml
