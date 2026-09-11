@@ -6,6 +6,507 @@
   function esc(s){ var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
   function ready(fn){ if(document.readyState !== "loading") fn(); else document.addEventListener("DOMContentLoaded", fn); }
 
+  /* ---------------- visual editor ----------------
+     An article is edited the way the page renders it, not as markdown. The
+     document is parsed into blocks, each holding the source lines it came
+     from; a block whose fields still match what was parsed is written back
+     verbatim, so editing one paragraph cannot reflow the two hundred around
+     it. Same idea as the question editor, applied to prose. */
+  var vblocks = null, vlead = "", vtail = "";
+
+  function escHtml(s){
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function rep(s, n){ return n > 0 ? new Array(n + 1).join(s) : ""; }
+
+  /* --- inline markdown <-> editable HTML --- */
+  function emphasize(html){
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(_, t, u){
+      return '<a href="#" data-href="' + escHtml(u) + '" title="' + escHtml(u) + '">' + t + "</a>";
+    });
+    html = html.replace(/\*\*(.+?)\*\*(?!\*)/g, "<b>$1</b>");
+    return html.replace(/\*([^*]+)\*/g, "<i>$1</i>");
+  }
+
+  function citeChip(cite){
+    return '<span class="cite-chip" contenteditable="false" data-cite="' + escHtml(cite) +
+           '" title="Click to edit this citation">(' +
+           escHtml(cite).replace(/\*([^*]+)\*/g, "<i>$1</i>") + ")</span>";
+  }
+
+  function mdInline(s){
+    /* Citations are pulled out before emphasis runs: their text contains
+       *Book Title*, which the italic pass would otherwise eat. Walking the
+       string in segments avoids needing a placeholder to protect them. */
+    var out = "", rx = /\((Source: [^)]*)\)/g, last = 0, m;
+    while((m = rx.exec(s)) !== null){
+      out += emphasize(escHtml(s.slice(last, m.index)));
+      out += citeChip(m[1]);
+      last = m.index + m[0].length;
+    }
+    return out + emphasize(escHtml(s.slice(last)));
+  }
+
+  /* Selecting "a word " and pressing Bold would otherwise emit "**a word **",
+     which puts the marker on the wrong side of the space. The whitespace is
+     moved outside the markers instead. */
+  function wrap(inner, mark){
+    var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(inner);
+    return m[2] ? m[1] + mark + m[2] + mark + m[3] : inner;
+  }
+
+  function mdFromNode(node){
+    var out = "";
+    for(var i = 0; i < node.childNodes.length; i++){
+      var n = node.childNodes[i];
+      /* inlineOf() collapses runs of whitespace, and JS \s covers the
+         non-breaking spaces contenteditable likes to insert. */
+      if(n.nodeType === 3){ out += n.nodeValue; continue; }
+      if(n.nodeType !== 1) continue;
+      if(n.classList && n.classList.contains("cite-chip")){
+        out += "(" + n.getAttribute("data-cite") + ")"; continue;
+      }
+      var tag = n.tagName;
+      if(tag === "BR"){ out += " "; continue; }
+      var inner = mdFromNode(n);
+      if(tag === "B" || tag === "STRONG") out += wrap(inner, "**");
+      else if(tag === "I" || tag === "EM") out += wrap(inner, "*");
+      else if(tag === "A") out += "[" + inner + "](" + (n.getAttribute("data-href") || n.getAttribute("href") || "") + ")";
+      else out += inner;
+    }
+    return out;
+  }
+
+  function inlineOf(el){ return mdFromNode(el).replace(/\s+/g, " ").replace(/^ +| +$/g, ""); }
+
+  /* --- parsing --- */
+  var FIG_RE = /^!\[(.*)\]\((\S+)\)$/;
+  var HEAD_RE = /^(#{1,4})\s+(.*)$/;
+  var UK_RE = /^:::\s*uk\b\s*(.*)$/i;
+
+  function isTableRow(s){
+    return s.charAt(0) === "|" && s.charAt(s.length - 1) === "|" && (s.split("|").length - 1) >= 2;
+  }
+  function isTableSep(s){ return /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(s); }
+  function tableCells(s){
+    s = s.trim();
+    if(s.charAt(0) === "|") s = s.slice(1);
+    if(s.charAt(s.length - 1) === "|") s = s.slice(0, -1);
+    return s.split("|").map(function(c){ return c.trim(); });
+  }
+
+  function vFingerprint(b){
+    if(b.type === "uk") return JSON.stringify(["uk", b.label]);
+    return JSON.stringify([b.type, b.level, b.text, b.items, b.head, b.rows, b.alt, b.src]);
+  }
+
+  function newBlock(type, raw, fields){
+    var b = {type: type, raw: raw, gap: 0};
+    for(var k in fields) b[k] = fields[k];
+    b.orig = vFingerprint(b);
+    return b;
+  }
+
+  function parseBlocks(lines, i, inFence){
+    var blocks = [], lead = 0;
+    while(i < lines.length){
+      var line = lines[i], s = line.trim();
+      if(!s){
+        if(blocks.length) blocks[blocks.length - 1].gap++; else lead++;
+        i++; continue;
+      }
+      if(inFence && s === ":::") break;
+
+      var m = UK_RE.exec(s);
+      if(m){
+        var inner = parseBlocks(lines, i + 1, true);
+        var uk = newBlock("uk", null, {label: m[1].trim(), children: inner.blocks, childLead: inner.lead});
+        uk.rawOpen = line;
+        i = inner.next;
+        uk.rawClose = (i < lines.length) ? lines[i] : ":::";
+        if(i < lines.length && lines[i].trim() === ":::") i++;
+        blocks.push(uk); continue;
+      }
+      if(s === ":::"){ blocks.push(newBlock("other", line, {})); i++; continue; }
+
+      m = FIG_RE.exec(s);
+      if(m){ blocks.push(newBlock("figure", line, {alt: m[1], src: m[2]})); i++; continue; }
+
+      m = HEAD_RE.exec(s);
+      if(m){ blocks.push(newBlock("heading", line, {level: m[1].length, text: m[2]})); i++; continue; }
+
+      if(isTableRow(s)){
+        var tstart = i, head = null, sep = null, rows = [];
+        while(i < lines.length && isTableRow(lines[i].trim())){
+          var t = lines[i].trim();
+          if(isTableSep(t)) sep = t;
+          else if(head === null) head = tableCells(t);
+          else rows.push(tableCells(t));
+          i++;
+        }
+        blocks.push(newBlock("table", lines.slice(tstart, i).join("\n"),
+                             {head: head || [], sep: sep, rows: rows}));
+        continue;
+      }
+
+      if(s.slice(0, 2) === "- "){
+        var lstart = i, items = [];
+        while(i < lines.length && lines[i].trim().slice(0, 2) === "- "){
+          items.push(lines[i].trim().slice(2)); i++;
+        }
+        blocks.push(newBlock("list", lines.slice(lstart, i).join("\n"), {items: items}));
+        continue;
+      }
+
+      /* Anything else is prose. Consecutive lines join into one paragraph,
+         which is what md_to_html does when it renders the page. */
+      var pstart = i, parts = [];
+      while(i < lines.length){
+        var ps = lines[i].trim();
+        if(!ps || ps === ":::" || UK_RE.test(ps) || FIG_RE.test(ps) || HEAD_RE.test(ps)
+           || isTableRow(ps) || ps.slice(0, 2) === "- ") break;
+        parts.push(ps); i++;
+      }
+      blocks.push(newBlock("para", lines.slice(pstart, i).join("\n"), {text: parts.join(" ")}));
+    }
+    return {blocks: blocks, lead: lead, next: i};
+  }
+
+  function parseDocument(md){
+    vtail = /\n*$/.exec(md)[0];
+    var body = md.slice(0, md.length - vtail.length);
+    var r = parseBlocks(body.split("\n"), 0, false);
+    vlead = rep("\n", r.lead);
+    return r.blocks;
+  }
+
+  /* --- serializing --- */
+  function rebuildBlock(b){
+    if(b.type === "heading") return rep("#", b.level) + " " + b.text;
+    if(b.type === "para") return b.text;
+    if(b.type === "figure") return "![" + b.alt + "](" + b.src + ")";
+    if(b.type === "list") return b.items.map(function(t){ return "- " + t; }).join("\n");
+    if(b.type === "table"){
+      var n = b.head.length;
+      var sep = (b.sep && tableCells(b.sep).length === n) ? b.sep : "|" + rep(" --- |", n);
+      var out = ["| " + b.head.join(" | ") + " |", sep];
+      b.rows.forEach(function(r){
+        var cells = r.slice(0, n);
+        while(cells.length < n) cells.push("");
+        out.push("| " + cells.join(" | ") + " |");
+      });
+      return out.join("\n");
+    }
+    return b.raw;
+  }
+
+  function blockText(b){
+    if(b.type === "uk"){
+      var open = (b.orig === vFingerprint(b) && b.rawOpen != null) ? b.rawOpen : "::: uk " + b.label;
+      return open + "\n" + serializeList(b.children, b.childLead || 0) + (b.rawClose || ":::");
+    }
+    return (b.raw != null && b.orig === vFingerprint(b)) ? b.raw : rebuildBlock(b);
+  }
+
+  /* Always ends with at least one newline, so a caller can append the next
+     thing straight onto it. */
+  function serializeList(blocks, lead){
+    var s = rep("\n", lead);
+    blocks.forEach(function(b){ s += blockText(b) + rep("\n", 1 + b.gap); });
+    return s;
+  }
+
+  function serializeDocument(){
+    return vlead + serializeList(vblocks, 0).replace(/\n+$/, "") + vtail;
+  }
+
+  /* --- addressing: "3" is a top-level block, "3.1" its second child --- */
+  function blockAt(path){
+    var parts = String(path).split("."), list = vblocks, b = null;
+    for(var i = 0; i < parts.length; i++){
+      b = list[+parts[i]];
+      if(!b) return null;
+      list = b.children || [];
+    }
+    return b;
+  }
+  function listOf(path){
+    var parts = String(path).split(".");
+    if(parts.length === 1) return vblocks;
+    return blockAt(parts.slice(0, -1).join(".")).children;
+  }
+  function indexOf(path){ var p = String(path).split("."); return +p[p.length - 1]; }
+
+  /* --- figure sources: the same mapping build.py uses --- */
+  function figWebSrc(src){
+    var m = /^(img|fig):\/\/(\w+)\/([\w.\-]+)\.png$/.exec(src);
+    if(m) return "assets/" + (m[1] === "img" ? "figs" : "figs2") + "/" + m[2] + "/" + m[3] + ".jpg";
+    m = /^svg:\/\/([\w.\-]+\.svg)$/.exec(src);
+    if(m) return "assets/infographics/" + m[1];
+    return src;
+  }
+
+  function ctlBar(path){
+    return '<div class="vctl">' +
+      '<button type="button" data-act="up" data-path="' + path + '" title="Move up">↑</button>' +
+      '<button type="button" data-act="down" data-path="' + path + '" title="Move down">↓</button>' +
+      '<button type="button" data-act="add" data-path="' + path + '" title="Insert a block below">+</button>' +
+      '<button type="button" data-act="del" data-path="' + path + '" title="Delete this block">✕</button>' +
+      "</div>";
+  }
+
+  function renderBlock(b, path){
+    var body = "";
+    if(b.type === "heading"){
+      var h = "h" + Math.min(b.level, 4);
+      body = "<" + h + ' contenteditable="true" data-edit="text" data-path="' + path + '">' +
+             mdInline(b.text) + "</" + h + ">";
+    } else if(b.type === "para"){
+      body = '<p contenteditable="true" data-edit="text" data-path="' + path + '">' +
+             mdInline(b.text) + "</p>";
+    } else if(b.type === "list"){
+      body = '<ul contenteditable="true" data-edit="items" data-path="' + path + '">' +
+             b.items.map(function(t){ return "<li>" + mdInline(t) + "</li>"; }).join("") + "</ul>";
+    } else if(b.type === "figure"){
+      var web = figWebSrc(b.src);
+      var media = /\.svg$/.test(web)
+        ? '<div class="vsvg" data-svg="' + escHtml(web) + '">loading diagram…</div>'
+        : '<img src="' + escHtml(web) + '" alt="" loading="lazy">';
+      body = "<figure>" + media +
+        '<figcaption contenteditable="true" data-edit="alt" data-path="' + path + '">' +
+        mdInline(b.alt) + "</figcaption></figure>" +
+        '<div class="vsrc"><label>Image</label><input type="text" data-edit="src" data-path="' +
+        path + '" value="' + escHtml(b.src) + '"></div>';
+    } else if(b.type === "table"){
+      var head = "<tr>" + b.head.map(function(c, ci){
+        return '<th contenteditable="true" data-edit="cell" data-path="' + path +
+               '" data-row="-1" data-col="' + ci + '">' + mdInline(c) + "</th>";
+      }).join("") + "</tr>";
+      var rows = b.rows.map(function(r, ri){
+        var cells = [];
+        for(var ci = 0; ci < b.head.length; ci++){
+          cells.push('<td contenteditable="true" data-edit="cell" data-path="' + path +
+                     '" data-row="' + ri + '" data-col="' + ci + '">' + mdInline(r[ci] || "") + "</td>");
+        }
+        return "<tr>" + cells.join("") +
+          '<td class="vrowctl"><button type="button" data-act="delrow" data-path="' + path +
+          '" data-row="' + ri + '" title="Delete row">✕</button></td></tr>';
+      }).join("");
+      body = '<div class="table-wrap"><table><thead>' + head + "</thead><tbody>" + rows +
+        "</tbody></table></div>" +
+        '<div class="vsrc"><button type="button" class="abtn" data-act="addrow" data-path="' + path +
+        '">Add row</button><button type="button" class="abtn" data-act="addcol" data-path="' + path +
+        '">Add column</button><button type="button" class="abtn" data-act="delcol" data-path="' + path +
+        '">Delete last column</button></div>';
+    } else if(b.type === "uk"){
+      body = '<div class="uk-note"><input class="uk-label-input" type="text" data-edit="label" data-path="' +
+        path + '" value="' + escHtml(b.label) + '" placeholder="UK Guideline">' +
+        '<div class="vchildren">' +
+        b.children.map(function(c, i){ return renderBlock(c, path + "." + i); }).join("") +
+        '</div><div class="vsrc"><button type="button" class="abtn" data-act="addchild" data-path="' +
+        path + '">Add a paragraph inside this note</button></div></div>';
+    } else {
+      body = '<pre class="vraw">' + escHtml(b.raw) + "</pre>";
+    }
+    return '<div class="vblock" data-path="' + path + '" data-type="' + b.type + '">' +
+           ctlBar(path) + body + "</div>";
+  }
+
+  function renderVisual(){
+    var host = $("visual");
+    host.innerHTML = '<article class="vdoc">' +
+      vblocks.map(function(b, i){ return renderBlock(b, String(i)); }).join("") +
+      "</article>" +
+      '<div class="vsrc" style="margin-top:1rem"><button type="button" class="abtn" data-act="addend">' +
+      "Add a block at the end</button></div>";
+    /* Inline diagrams are SVG so they can follow the page's light/dark
+       variables; an <img> could not. */
+    var pending = host.querySelectorAll(".vsvg[data-svg]");
+    for(var i = 0; i < pending.length; i++){
+      (function(el){
+        fetch(el.getAttribute("data-svg")).then(function(r){ return r.ok ? r.text() : null; })
+          .then(function(svg){ if(svg) el.innerHTML = svg.replace(/<\?xml[^>]*\?>\s*/, ""); })
+          .catch(function(){ el.textContent = "diagram not found"; });
+      })(pending[i]);
+    }
+  }
+
+  /* --- reading edits back out of the DOM --- */
+  function pullField(el){
+    var b = blockAt(el.getAttribute("data-path"));
+    if(!b) return;
+    var field = el.getAttribute("data-edit");
+    if(field === "items"){
+      var lis = el.querySelectorAll("li");
+      b.items = [];
+      for(var i = 0; i < lis.length; i++){
+        var t = inlineOf(lis[i]);
+        if(t) b.items.push(t);
+      }
+      if(!b.items.length) b.items = [""];
+    } else if(field === "cell"){
+      var row = +el.getAttribute("data-row"), col = +el.getAttribute("data-col");
+      if(row < 0) b.head[col] = inlineOf(el);
+      else { b.rows[row] = b.rows[row] || []; b.rows[row][col] = inlineOf(el); }
+    } else if(field === "src" || field === "label"){
+      b[field] = el.value;
+    } else {
+      b[field] = inlineOf(el);
+    }
+    markDirty();
+  }
+
+  function blankBlock(type){
+    if(type === "heading") return newBlock("heading", null, {level: 2, text: "New section"});
+    if(type === "list") return newBlock("list", null, {items: ["First point"]});
+    if(type === "figure") return newBlock("figure", null, {alt: "Caption", src: "fig://bailey/x.png"});
+    if(type === "table") return newBlock("table", null,
+      {head: ["Column", "Column"], sep: null, rows: [["", ""]]});
+    if(type === "uk") return newBlock("uk", null,
+      {label: "NICE", children: [newBlock("para", null, {text: "Guidance text."})], childLead: 0});
+    return newBlock("para", null, {text: "New paragraph."});
+  }
+
+  function wireVisual(){
+    var host = $("visual");
+
+    host.addEventListener("input", function(e){
+      var el = e.target.closest ? e.target.closest("[data-edit]") : null;
+      if(el) pullField(el);
+    });
+    host.addEventListener("blur", function(e){
+      var el = e.target.closest ? e.target.closest("[data-edit]") : null;
+      if(el) pullField(el);
+    }, true);
+
+    host.addEventListener("click", function(e){
+      var chip = e.target.closest(".cite-chip");
+      if(chip){
+        var cur = chip.getAttribute("data-cite");
+        var next = prompt("Citation — the text inside the brackets:", cur);
+        if(next === null) return;
+        next = next.trim();
+        var holder = chip.closest("[data-edit]");
+        if(!next) chip.parentNode.removeChild(chip);
+        else {
+          chip.setAttribute("data-cite", next);
+          chip.innerHTML = "(" + escHtml(next).replace(/\*([^*]+)\*/g, "<i>$1</i>") + ")";
+        }
+        if(holder) pullField(holder);
+        return;
+      }
+      var btn = e.target.closest("button[data-act]");
+      if(!btn) return;
+      var act = btn.getAttribute("data-act"), path = btn.getAttribute("data-path");
+      var list, i, b;
+      if(act === "addend"){
+        var t0 = pickType();
+        if(t0){ vblocks.push(blankBlock(t0)); renderVisual(); markDirty(); }
+        return;
+      }
+      list = listOf(path); i = indexOf(path); b = list[i];
+      if(act === "up" && i > 0){ list.splice(i - 1, 0, list.splice(i, 1)[0]); }
+      else if(act === "down" && i < list.length - 1){ list.splice(i + 1, 0, list.splice(i, 1)[0]); }
+      else if(act === "del"){
+        if(!confirm("Delete this " + b.type + " block?")) return;
+        var gap = b.gap;
+        list.splice(i, 1);
+        if(list.length && i > 0) list[i - 1].gap = Math.max(list[i - 1].gap, gap);
+      }
+      else if(act === "add"){
+        var t = pickType();
+        if(!t) return;
+        var nb = blankBlock(t);
+        nb.gap = b.gap || 1;
+        list.splice(i + 1, 0, nb);
+      }
+      else if(act === "addchild"){
+        b.children.push(newBlock("para", null, {text: "Guidance text."}));
+        b.children[b.children.length - 2] && (b.children[b.children.length - 2].gap = 1);
+      }
+      else if(act === "addrow"){ b.rows.push(b.head.map(function(){ return ""; })); }
+      else if(act === "delrow"){ b.rows.splice(+btn.getAttribute("data-row"), 1); }
+      else if(act === "addcol"){
+        b.head.push("Column"); b.sep = null;
+        b.rows.forEach(function(r){ r.push(""); });
+      }
+      else if(act === "delcol"){
+        if(b.head.length <= 1) return;
+        b.head.pop(); b.sep = null;
+        b.rows.forEach(function(r){ r.pop(); });
+      }
+      else return;
+      renderVisual(); markDirty();
+    });
+
+    /* Enter inside a paragraph or heading splits it into a new block, the way
+       a document editor behaves — rather than dropping a <div> into the
+       markdown. Lists keep the browser's own Enter handling. */
+    host.addEventListener("keydown", function(e){
+      if(e.key !== "Enter" || e.shiftKey) return;
+      var el = e.target.closest ? e.target.closest('[data-edit="text"]') : null;
+      if(!el) return;
+      e.preventDefault();
+      var path = el.getAttribute("data-path"), b = blockAt(path);
+      pullField(el);
+      var list = listOf(path), i = indexOf(path);
+      var nb = newBlock("para", null, {text: ""});
+      nb.gap = 1;
+      if(!b.gap) b.gap = 1;
+      list.splice(i + 1, 0, nb);
+      renderVisual(); markDirty();
+      var next = host.querySelector('[data-path="' + (list === vblocks ? String(i + 1) :
+                 path.split(".").slice(0, -1).join(".") + "." + (i + 1)) + '"][data-edit]');
+      if(next) next.focus();
+    });
+  }
+
+  function pickType(){
+    var t = prompt("Add which block?\n\n  p = paragraph\n  h = heading\n  l = bullet list\n" +
+                   "  t = table\n  f = figure\n  u = UK guideline note", "p");
+    if(!t) return null;
+    t = t.trim().toLowerCase().charAt(0);
+    return {p: "para", h: "heading", l: "list", t: "table", f: "figure", u: "uk"}[t] || null;
+  }
+
+  /* --- the formatting toolbar --- */
+  function wireFormatBar(){
+    function focused(){
+      var el = document.activeElement;
+      return (el && el.closest && el.closest("#visual [data-edit]")) ? el : null;
+    }
+    function run(cmd){
+      var el = focused();
+      if(!el){ OS.showToast("Put the cursor in some text first."); return; }
+      document.execCommand(cmd, false, null);
+      pullField(el);
+    }
+    $("fmt-bold").addEventListener("mousedown", function(e){ e.preventDefault(); run("bold"); });
+    $("fmt-italic").addEventListener("mousedown", function(e){ e.preventDefault(); run("italic"); });
+    $("fmt-link").addEventListener("mousedown", function(e){
+      e.preventDefault();
+      var el = focused();
+      if(!el){ OS.showToast("Select the words to link first."); return; }
+      var url = prompt("Link to:", "https://");
+      if(!url) return;
+      document.execCommand("createLink", false, url);
+      var a = el.querySelector('a[href="' + url + '"]');
+      if(a) a.setAttribute("data-href", url);
+      pullField(el);
+    });
+    $("fmt-cite").addEventListener("mousedown", function(e){
+      e.preventDefault();
+      var el = focused();
+      if(!el){ OS.showToast("Put the cursor where the citation goes first."); return; }
+      var cite = prompt("Citation — the text inside the brackets:",
+                        "Source: *Bailey & Love 28e*, Ch. ");
+      if(!cite) return;
+      document.execCommand("insertHTML", false, citeChip(cite.trim()) + " ");
+      pullField(el);
+    });
+  }
+
   /* ---------------- question parsing ----------------
      Mirrors parse_questions() in build.py so the structured editor sees the
      same questions the quiz does. The file is kept as a list of blocks —
@@ -183,7 +684,9 @@
 
   /* ---------------- editor ---------------- */
   function editorText(){
-    return mode === "q" && blocks ? serializeBlocks(blocks) : $("editor").value;
+    if(mode === "visual" && vblocks) return serializeDocument();
+    if(mode === "q" && blocks) return serializeBlocks(blocks);
+    return $("editor").value;
   }
   function dirty(){ return cur && editorText() !== curBody; }
 
@@ -198,13 +701,14 @@
     OS.req("/api/admin/docs/" + path).then(function(r){
       if(!r.ok) return r.json().then(function(j){ OS.showToast(j.detail || "Could not open that document."); });
       return r.json().then(function(d){
-        cur = d; curBody = d.body; blocks = null; mode = "md";
+        cur = d; curBody = d.body; blocks = null; vblocks = null; mode = "md";
         $("editor").value = d.body;
         $("doc-title").textContent = d.kind === "question-bank"
           ? catName(d.category_slug) + " question bank" : d.title;
         $("doc-path").textContent = d.path;
         $("revert-btn").disabled = !d.edited;
         $("mode-q").style.display = d.kind === "question-bank" ? "" : "none";
+        $("mode-visual").style.display = d.kind === "question-bank" ? "none" : "";
         $("editor-panes").style.display = "";
         $("admin-empty").style.display = "none";
         $("meta").textContent = d.edited
@@ -212,7 +716,10 @@
             (d.updated_at ? " · " + d.updated_at.slice(0, 16).replace("T", " ") : "") +
             " · " + d.revisions + " revision(s)"
           : "Matches the repo";
-        setMode("md");
+        /* Articles open in the visual editor, question banks in the
+           question editor -- both round-trip untouched content verbatim, so
+           opening a file in one cannot rewrite it. */
+        setMode(d.kind === "question-bank" ? "q" : "visual");
         renderList();
         markDirty();
       });
@@ -222,14 +729,23 @@
   function setMode(m){
     if(!cur) return;
     if(m === "q" && cur.kind !== "question-bank") return;
-    if(m === "q" && mode === "md") blocks = parseQuestions($("editor").value);
-    if(m === "md" && mode === "q" && blocks) $("editor").value = serializeBlocks(blocks);
+    if(m === "visual" && cur.kind === "question-bank") return;
+    /* Leaving a structured pane writes what it holds back into the textarea,
+       so whichever pane is shown next starts from the current text. */
+    if(mode === "q" && blocks && m !== "q") $("editor").value = serializeBlocks(blocks);
+    if(mode === "visual" && vblocks && m !== "visual") $("editor").value = serializeDocument();
+    if(m === "q" && mode !== "q") blocks = parseQuestions($("editor").value);
+    if(m === "visual" && mode !== "visual") vblocks = parseDocument($("editor").value);
     mode = m;
+    $("mode-visual").classList.toggle("on", m === "visual");
     $("mode-md").classList.toggle("on", m === "md");
     $("mode-q").classList.toggle("on", m === "q");
     $("editor").style.display = m === "md" ? "" : "none";
     $("qedit").style.display = m === "q" ? "" : "none";
+    $("visual").style.display = m === "visual" ? "" : "none";
+    $("vbar").style.display = m === "visual" ? "" : "none";
     if(m === "q") renderQuestions();
+    if(m === "visual") renderVisual();
     markDirty();
   }
 
@@ -365,7 +881,9 @@
         } else {
           curBody = res.body;
           $("editor").value = res.body;
-          blocks = null; setMode("md");
+          blocks = null; vblocks = null;
+          mode = "md";
+          setMode(cur.kind === "question-bank" ? "q" : "visual");
           cur.edited = false;
           if(byPath[cur.path]) byPath[cur.path].edited = false;
           $("revert-btn").disabled = true;
@@ -393,7 +911,10 @@
         if(!n || n < 1 || n > rows.length) return;
         OS.req("/api/admin/revisions/" + rows[n-1].id).then(function(r2){ return r2.json(); })
           .then(function(rev){
-            $("editor").value = rev.body; blocks = null; setMode("md"); markDirty();
+            $("editor").value = rev.body; blocks = null; vblocks = null;
+            mode = "md";
+            setMode(cur.kind === "question-bank" ? "q" : "visual");
+            markDirty();
             OS.showToast("Loaded revision from " + (rev.created_at || "").slice(0, 16).replace("T", " ") +
                          " — press Save to keep it.");
           });
@@ -517,9 +1038,12 @@
       $("revert-btn").addEventListener("click", revert);
       $("history-btn").addEventListener("click", history);
       $("new-btn").addEventListener("click", newTopic);
+      $("mode-visual").addEventListener("click", function(){ setMode("visual"); });
       $("mode-md").addEventListener("click", function(){ setMode("md"); });
       $("mode-q").addEventListener("click", function(){ setMode("q"); });
       wireQuestionEditor();
+      wireVisual();
+      wireFormatBar();
       wireUsers();
 
       document.addEventListener("keydown", function(e){
