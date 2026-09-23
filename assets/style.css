@@ -629,7 +629,7 @@ article h2[id],article h3[id]{scroll-margin-top:4.5rem}
 :root.auth-wait.auth-slow body::after{content:"Waking up the server \2014 this can take up to a minute\2026"}
 :root.auth-wait.auth-offline body::after{content:"Can't reach the sign-in server right now. Please try again shortly."}
 /* resident: the textbook article alone, and none of the UK-only references */
-:root[data-level="resident"] .uk-note,:root[data-level="resident"] .refs li.ref-uk{display:none}
+:root[data-level="resident"] .uk-note:not(.always),:root[data-level="resident"] .refs li.ref-uk{display:none}
 .coming-soon{display:none}
 :root[data-level="student"]:is([data-access="article"],[data-access="qbank"]) main{display:none}
 :root[data-level="student"]:is([data-access="article"],[data-access="qbank"]) .coming-soon{display:block}
