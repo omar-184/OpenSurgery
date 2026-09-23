@@ -1,0 +1,15 @@
+# The API runs on Render's free plan, which sleeps after 15 minutes without a
+# request and takes a minute or more to wake. Pinging it keeps it awake so the
+# profile menu and account pages load at once. /healthz does not touch the
+# database, so this does not keep Neon awake too.
+name: Keep API warm
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - run: curl -fsS --max-time 180 --retry 2 https://opensurgery-api.onrender.com/healthz

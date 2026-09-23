@@ -101,8 +101,11 @@
         localStorage.setItem("os-signed-in", "1");
         if(user.academic_level) localStorage.setItem("os-level", user.academic_level);
         else localStorage.removeItem("os-level");
+        // Just what the header menu shows, so it can be drawn before the API answers.
+        localStorage.setItem("os-user", JSON.stringify({display_name: user.display_name, email: user.email,
+          auth_provider: user.auth_provider, role: user.role, academic_level: user.academic_level, country: user.country}));
       } else {
-        localStorage.removeItem("os-signed-in"); localStorage.removeItem("os-level");
+        localStorage.removeItem("os-signed-in"); localStorage.removeItem("os-level"); localStorage.removeItem("os-user");
       }
     }catch(e){}
     if(user && user.academic_level) de.setAttribute("data-level", user.academic_level);
@@ -115,9 +118,13 @@
   if(gated && API && !cachedSignedIn()){
     location.replace(root + "login.html?next=" + encodeURIComponent(hereFromRoot()));
   }
-  // Signed-out visitors get the "Log in" link at once rather than after the
-  // API wakes; signed-in ones keep an empty slot until their avatar arrives.
+  // The API sleeps when idle (Render free plan) and can take a minute to wake.
+  // Draw the header from the last known profile now and refresh it when the
+  // API answers; signed-out visitors get the "Log in" link at once.
+  var cachedUser = null;
+  try{ cachedUser = cachedSignedIn() ? JSON.parse(localStorage.getItem("os-user") || "null") : null; }catch(e){}
   if(!cachedSignedIn()) renderAuthArea(null);
+  else if(cachedUser) renderAuthArea(cachedUser);
   var slowTimer = setTimeout(function(){ de.classList.add("auth-slow"); }, 4000);
   function unwait(){ clearTimeout(slowTimer); de.classList.remove("auth-wait", "auth-slow", "auth-offline"); }
 
@@ -211,7 +218,7 @@
   }
 
   mePromise.then(function(user){
-    renderAuthArea(user);
+    if(user || !offline || !cachedUser) renderAuthArea(user);
     if(!user){
       if(offline){
         // The API is down or asleep, which is not a signed-out answer: someone
