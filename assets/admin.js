@@ -595,7 +595,7 @@
   }
 
   /* ---------------- checks ---------------- */
-  var TOPIC_SECTIONS = ["Summary","Definition","Pathophysiology","Clinical features","Etiology",
+  var TOPIC_SECTIONS = ["Summary","Definition","Pathophysiology","Clinical features","Aetiology",
     "Diagnosis","Scoring and Severity","Treatment and Management","Surgeries","Complications","Prognosis"];
 
   function runChecks(doc, text){
@@ -924,7 +924,7 @@
     var path = "content/" + cat + "/" + slug + ".md";
     if(byPath[path]){ OS.showToast("That page already exists."); openDoc(path); return; }
     var skeleton = "# " + title + "\n\n" + ["Summary","Definition","Pathophysiology","Clinical features",
-      "Etiology","Diagnosis","Scoring and Severity","Treatment and Management","Surgeries",
+      "Aetiology","Diagnosis","Scoring and Severity","Treatment and Management","Surgeries",
       "Complications","Prognosis"].map(function(s){
         return "## " + s + "\n*Not covered in source textbooks.*\n";
       }).join("\n");

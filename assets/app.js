@@ -22,10 +22,39 @@
     if(cat.indexOf(q) >= 0) return 20 - title.length / 100;
     return -1;
   }
+  // The site is written in UK spelling but readers type both, so a query is
+  // widened to its UK/US spelling variants ("hemorrhoid" also finds
+  // "haemorrhoid", "tumor" finds "tumour") before it is matched.
+  var SPELL = [["oesophag","esophag"],["haem","hem"],["anaes","anes"],["aetiol","etiol"],
+    ["ischaem","ischem"],["tumour","tumor"],["paediatr","pediatr"],["oedema","edema"],
+    ["diarrhoea","diarrhea"],["gynaec","gynec"],["colour","color"],["faec","fec"],["caec","cec"],
+    ["orthopaed","orthoped"],["aemia","emia"],["gord","gerd"],["hiatus hernia","hiatal hernia"],
+    ["isation","ization"],["ising","izing"],["ised","ized"],["litre","liter"],["centre","center"],
+    ["fibre","fiber"],["manoeuvre","maneuver"],["behaviour","behavior"],["labour","labor"],
+    ["foetal","fetal"],["oestrogen","estrogen"],["coeliac","celiac"],["sulph","sulf"]];
+  function variants(q){
+    var out = [q];
+    SPELL.forEach(function(p){
+      out.slice().forEach(function(v){
+        var alt = v.indexOf(p[0]) >= 0 ? v.split(p[0]).join(p[1])
+                : v.indexOf(p[1]) >= 0 ? v.split(p[1]).join(p[0]) : null;
+        if(alt && out.indexOf(alt) < 0 && out.length < 16) out.push(alt);
+      });
+    });
+    return out;
+  }
+  window.OSVariants = variants;
+  function firstHit(text, qs){
+    var lt = text.toLowerCase();
+    for(var i = 0; i < qs.length; i++) if(lt.indexOf(qs[i]) >= 0) return qs[i];
+    return null;
+  }
   function filterIdx(q){
     q = q.trim().toLowerCase();
     if(!q) return idx.slice(0,12);
-    return idx.map(function(t){ return {t:t, s:scoreIdx(t,q)}; })
+    var qs = variants(q);
+    return idx.map(function(t){
+                 return {t:t, s:Math.max.apply(null, qs.map(function(v){ return scoreIdx(t,v); }))}; })
               .filter(function(x){ return x.s >= 0; })
               .sort(function(a,b){ return b.s - a.s; })
               .map(function(x){ return x.t; });
@@ -57,6 +86,7 @@
   }
   function fullHits(q, exclude){
     if(!ft || q.length < 3) return [];
+    var qs = variants(q);
     var seen = {}, out = [];
     exclude.forEach(function(t){ seen[t.url] = 1; });
     for(var i = 0; i < ft.length && out.length < 8; i++){
@@ -64,10 +94,10 @@
       if(seen[d.u]) continue;
       for(var j = 0; j < d.s.length; j++){
         var sec = d.s[j];
-        if(sec[1].toLowerCase().indexOf(q) >= 0 ||
-           (sec[0] && sec[0].toLowerCase().indexOf(q) >= 0)){
+        var hit = firstHit(sec[1], qs) || (sec[0] && firstHit(sec[0], qs));
+        if(hit){
           out.push({title: d.t, cat: d.c, url: d.u,
-                    section: sec[0], snip: snippet(sec[1], q)});
+                    section: sec[0], snip: snippet(sec[1], hit)});
           seen[d.u] = 1;
           break;
         }
