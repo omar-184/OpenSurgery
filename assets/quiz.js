@@ -3,13 +3,12 @@
   var MODE = window.QUIZ_MODE, ALL = window.QUIZ_DATA || [];
   var params = new URLSearchParams(location.search);
   var topicFilter = params.get("topic");
-  var QS = topicFilter ? ALL.filter(function(q){ return q.topic === topicFilter; }) : ALL;
+  var POOL = topicFilter ? ALL.filter(function(q){ return q.topic === topicFilter; }) : ALL;
   var mount = document.getElementById("quiz");
-  if(!QS.length){ mount.innerHTML = "<p>No questions available for this selection.</p>"; return; }
-  var state = QS.map(function(){ return {picked:null, locked:false, flagged:false}; });
+  if(!POOL.length){ mount.innerHTML = "<p>No questions available for this selection.</p>"; return; }
+  var QS = POOL, state = null;
   var cur = 0, finished = false, timerId = null;
-  var examLeft = QS.length * 60;
-  var startedAt = new Date().toISOString();
+  var examLeft = 0, startedAt = null;
 
   function el(tag, cls, htmlStr){ var d=document.createElement(tag); if(cls)d.className=cls; if(htmlStr!=null)d.innerHTML=htmlStr; return d; }
   function answered(){ return state.filter(function(s){ return s.picked!==null || s.locked; }).length; }
@@ -69,7 +68,7 @@
         verdict.setAttribute("aria-live","polite");
         card.appendChild(verdict);
       }
-      if(gradeable(q) && q.answerText) card.appendChild(el("p","qmeta","<strong>Why:</strong> "+q.answerText));
+      if(gradeable(q) && q.answerText) card.appendChild(el("p","qwhy","<strong>Why:</strong> "+q.answerText));
       if(!gradeable(q) && q.options.length) card.appendChild(el("p","qmeta","Answer key pending for this question; check it against the source below."));
       card.appendChild(el("p","qmeta",q.source));
     }
@@ -166,6 +165,54 @@
     mount.appendChild(back);
   }
 
-  render();
-  if(MODE==="exam") timerId = setInterval(tick, 1000);
+  function shuffled(a){
+    a = a.slice();
+    for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function begin(list){
+    QS = list;
+    state = QS.map(function(){ return {picked:null, locked:false, flagged:false}; });
+    examLeft = QS.length * 60;
+    startedAt = new Date().toISOString();
+    render();
+    if(MODE==="exam") timerId = setInterval(tick, 1000);
+  }
+  // An exam paper is built before the clock starts: how many questions, and
+  // whether to shuffle them (the bank is stored grouped by topic, so an
+  // unshuffled paper walks through the topics in order).
+  function setup(){
+    var sizes = [10, 20, 40].filter(function(n){ return n < POOL.length; });
+    sizes.push(POOL.length);
+    var pick = sizes.length > 1 ? sizes[Math.min(1, sizes.length-1)] : POOL.length;
+    var box = el("div","qcard exam-setup");
+    box.appendChild(el("h2",null,"Set up your paper"));
+    box.appendChild(el("p","qmeta","One clock for the whole paper: a minute per question. You can move freely between questions."));
+    box.appendChild(el("div","setup-label","Number of questions"));
+    var row = el("div","setup-sizes");
+    sizes.forEach(function(n){
+      var b = el("button","opt setup-size"+(n===pick?" sel":""), n===POOL.length ? "All "+n : String(n));
+      b.type = "button";
+      b.onclick = function(){ pick = n; [].forEach.call(row.children, function(c){ c.classList.remove("sel"); }); b.classList.add("sel"); };
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+    var lab = el("label","setup-shuffle");
+    var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true;
+    lab.appendChild(cb); lab.appendChild(document.createTextNode(" Shuffle the questions"));
+    box.appendChild(lab);
+    var start = el("button","btn fill","Start exam");
+    start.onclick = function(){
+      var list = cb.checked ? shuffled(POOL) : POOL.slice();
+      begin(list.slice(0, pick));
+      window.scrollTo({top:0});
+    };
+    var nav = el("div","quiz-nav"); nav.appendChild(el("div","spacer")); nav.appendChild(start);
+    mount.innerHTML = ""; mount.appendChild(box); mount.appendChild(nav);
+  }
+  // Leaving mid-paper throws the answers away, so ask first.
+  window.addEventListener("beforeunload", function(e){
+    if(state && !finished && answered() > 0){ e.preventDefault(); e.returnValue = ""; }
+  });
+  if(MODE==="exam" && POOL.length > 10) setup(); else begin(POOL);
 })();

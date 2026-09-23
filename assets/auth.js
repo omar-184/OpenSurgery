@@ -108,6 +108,16 @@
     if(user && user.academic_level) de.setAttribute("data-level", user.academic_level);
     else de.removeAttribute("data-level");
   };
+  // Someone who has never signed in on this device cannot be let in by the
+  // server's answer (the login page picks up a live session if there is one),
+  // so send them straight to it instead of waiting on a sleeping API.
+  var gated = access !== "public" && access !== "login";
+  if(gated && API && !cachedSignedIn()){
+    location.replace(root + "login.html?next=" + encodeURIComponent(hereFromRoot()));
+  }
+  // Signed-out visitors get the "Log in" link at once rather than after the
+  // API wakes; signed-in ones keep an empty slot until their avatar arrives.
+  if(!cachedSignedIn()) renderAuthArea(null);
   var slowTimer = setTimeout(function(){ de.classList.add("auth-slow"); }, 4000);
   function unwait(){ clearTimeout(slowTimer); de.classList.remove("auth-wait", "auth-slow", "auth-offline"); }
 
