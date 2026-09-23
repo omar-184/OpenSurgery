@@ -2,7 +2,9 @@
 (function(){
   function ready(fn){ if(document.readyState !== "loading") fn(); else document.addEventListener("DOMContentLoaded", fn); }
   ready(function(){
-    var next = new URLSearchParams(location.search).get("next") || (document.body.dataset.root || "") + "index.html";
+    var next = new URLSearchParams(location.search).get("next") || "";
+    // A relative path inside the site only: no scheme, no host, no leading slash.
+    if(!/^[A-Za-z0-9_-][A-Za-z0-9_.\/-]*(\?[^#]*)?(#.*)?$/.test(next) || next.indexOf("//") >= 0) next = "index.html";
     var errBox = document.getElementById("auth-error");
     function showErr(msg){ errBox.textContent = msg; errBox.classList.add("show"); }
     function clearErr(){ errBox.textContent = ""; errBox.classList.remove("show"); }
@@ -12,9 +14,6 @@
     function afterAuth(){
       OS.claimLocalProgress().then(function(){ location.href = next; });
     }
-
-    var skip = document.getElementById("skip-btn");
-    if(skip) skip.addEventListener("click", function(){ location.href = next; });
 
     var showSignupBtn = document.getElementById("show-signup");
     var showLoginLink = document.getElementById("show-login");

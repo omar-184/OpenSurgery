@@ -163,16 +163,6 @@
     try{ localStorage.setItem("os-theme", isLight ? "dark" : "light"); }catch(e){}
   });
 
-  // ---- UK guidelines toggle ----
-  var ukToggle = document.getElementById("uk-toggle");
-  if(ukToggle){
-    ukToggle.checked = !document.documentElement.classList.contains("hide-uk");
-    ukToggle.addEventListener("change", function(){
-      document.documentElement.classList.toggle("hide-uk", !ukToggle.checked);
-      try{ localStorage.setItem("os-uk-guidelines", ukToggle.checked ? "1" : "0"); }catch(e){}
-    });
-  }
-
   var rail = document.querySelector(".rail");
   if(rail && "IntersectionObserver" in window){
     var links = {}, obs = new IntersectionObserver(function(es){

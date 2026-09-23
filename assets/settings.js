@@ -9,6 +9,9 @@
       }
       document.getElementById("settings-email").textContent = user.email || "";
       document.getElementById("name-input").value = user.display_name;
+      document.getElementById("level-options").innerHTML = OS.levelPickerHtml("level", user.academic_level);
+      document.getElementById("country-input").innerHTML =
+        '<option value="">Choose your country\u2026</option>' + OS.countryOptions(user.country);
       if(user.auth_provider === "google"){
         document.getElementById("password-section").style.display = "none";
         document.getElementById("google-note").style.display = "block";
@@ -24,6 +27,23 @@
       OS.req("/api/auth/me", {method:"PATCH", body: JSON.stringify({display_name: name})}).then(function(r){
         if(r.ok){ OS.showToast("Display name updated."); return; }
         return r.json().then(function(d){ nameErr.textContent = d.detail || "Could not update."; nameErr.classList.add("show"); });
+      });
+    });
+
+    var profErr = document.getElementById("profile-error");
+    document.getElementById("profile-form").addEventListener("submit", function(e){
+      e.preventDefault();
+      profErr.classList.remove("show");
+      var picked = document.querySelector('#level-options input[name="level"]:checked');
+      var country = document.getElementById("country-input").value;
+      if(!picked || !country){ profErr.textContent = "Choose your level and your country."; profErr.classList.add("show"); return; }
+      OS.req("/api/auth/me", {method:"PATCH", body: JSON.stringify({academic_level: picked.value, country: country})}).then(function(r){
+        if(r.ok) return r.json().then(function(u){
+          OS.applyUser(u);
+          OS.renderAuthArea(u);
+          OS.showToast("Saved. Articles now show the " + OS.levelName(u.academic_level).toLowerCase() + " version.");
+        });
+        return r.json().then(function(d){ profErr.textContent = typeof d.detail === "string" ? d.detail : "Could not update."; profErr.classList.add("show"); });
       });
     });
 
