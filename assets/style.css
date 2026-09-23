@@ -403,6 +403,12 @@ article tr:last-child td{border-bottom:0}
   transition:color .15s,border-color .15s}
 .rail a:hover{color:var(--text);text-decoration:none}
 .rail a.on{color:var(--accent);border-color:var(--accent)}
+.rail{max-height:calc(100vh - 6rem);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.rail-sub{display:none}
+.rail-sub.open{display:block}
+.rail a.r3{padding:.2rem .8rem .2rem 1.6rem;font-size:.78rem;line-height:1.35}
+.rail a.r2.parent{color:var(--text)}
+#rail-drawer .rd-links a.r3{padding:.6rem 1.1rem .6rem 2rem;font-size:.9rem}
 /* the sticky toolbar would otherwise sit on top of a jumped-to heading */
 article h2[id],article h3[id]{scroll-margin-top:4.5rem}
 /* ---------- mobile section drawer (stands in for the hidden rail) ---------- */

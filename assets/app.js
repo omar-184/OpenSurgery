@@ -196,15 +196,31 @@
   var rail = document.querySelector(".rail");
   if(rail && "IntersectionObserver" in window){
     var links = {}, obs = new IntersectionObserver(function(es){
-      es.forEach(function(en){ if(en.isIntersecting){
-        rail.querySelectorAll("a").forEach(function(a){a.classList.remove("on");});
-        var a = links[en.target.id]; if(a) a.classList.add("on");
-      }});
+      es.forEach(function(en){ if(en.isIntersecting){ railMark(rail, en.target.id); }});
     }, {rootMargin:"-10% 0px -75% 0px"});
-    rail.querySelectorAll("a").forEach(function(a){
+    rail.querySelectorAll("a[href^='#']").forEach(function(a){
       var id = a.getAttribute("href").slice(1), h = document.getElementById(id);
       if(h){ links[id]=a; obs.observe(h); }
     });
+  }
+
+  // Highlight the link for heading `id` in a rail-shaped container and open
+  // the sub-heading group of its section (closing the others). Keeps the
+  // highlighted link in view when the rail itself scrolls.
+  function railMark(box, id){
+    var a = box.querySelector('a[href="#' + id + '"]'); if(!a) return;
+    box.querySelectorAll("a").forEach(function(x){ x.classList.remove("on", "parent"); });
+    a.classList.add("on");
+    var sub = a.classList.contains("r3") ? a.parentNode : a.nextElementSibling;
+    var head = a.classList.contains("r3") ? sub.previousElementSibling : a;
+    if(head && head !== a) head.classList.add("parent");
+    box.querySelectorAll(".rail-sub").forEach(function(g){
+      g.classList.toggle("open", !!sub && g === sub && sub.classList.contains("rail-sub"));
+    });
+    if(box.scrollHeight > box.clientHeight){
+      var r = a.getBoundingClientRect(), br = box.getBoundingClientRect();
+      if(r.top < br.top || r.bottom > br.bottom) box.scrollTop += r.top - br.top - box.clientHeight / 3;
+    }
   }
 
   // ---- mobile section drawer: the rail is hidden under 980px, so the same
@@ -221,17 +237,13 @@
       + '<div class="rd-head">On this page</div>'
       + '<nav class="rd-links"></nav></div>';
     var rdLinks = drawer.querySelector(".rd-links"), railFocus = null;
-    rail.querySelectorAll("a").forEach(function(a){
-      var c = document.createElement("a");
-      c.href = a.getAttribute("href"); c.textContent = a.textContent;
-      c.addEventListener("click", closeRail);
-      rdLinks.appendChild(c);
+    [].forEach.call(rail.children, function(n){
+      if(n.matches("a.r2, .rail-sub")) rdLinks.appendChild(n.cloneNode(true));
     });
+    rdLinks.querySelectorAll("a").forEach(function(a){ a.addEventListener("click", closeRail); });
     function syncActive(){
-      var on = rail.querySelector("a.on"), href = on && on.getAttribute("href");
-      rdLinks.querySelectorAll("a").forEach(function(a){
-        a.classList.toggle("on", href != null && a.getAttribute("href") === href);
-      });
+      var on = rail.querySelector("a.on");
+      if(on) railMark(rdLinks, on.getAttribute("href").slice(1));
     }
     function openRail(){
       syncActive();
